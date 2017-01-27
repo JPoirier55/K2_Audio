@@ -7,6 +7,7 @@ import uart
 class UDPHandler(SocketServer.BaseRequestHandler):
     def handle(self):
       data = self.request[0].strip()
+      print data
       socket = self.request[1]
       command_handler = uart.CommandHandler(data)
       command_handler.process_command()
