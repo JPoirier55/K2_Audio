@@ -3,15 +3,9 @@ import json
 
 
 class SerialSendHandler:
-    def __init__(self, baudrate=115200, timeout=5):
+    def __init__(self, baudrate=115200, timeout=None):
         self.baudrate = baudrate
         self.timeout = timeout
-
-    def open(self):
-        self.port.open()
-
-    def close(self):
-        self.port.close()
 
     def test_connection(self):
         if self.port.is_open():
@@ -46,15 +40,20 @@ class CommandHandler:
         return uart_send
 
     def build_uart_command(self, seat_id, state):
-        uart_seat = seat_id % 60
-        json = {'seat_id': uart_seat,
+        controller_seat = seat_id % 51
+        controller_id = seat_id % 4
+        if state == 0:
+          green = 0
+          red = 0
+        json = {'controller_id': controller_id,
+                'seat_id': controller_seat,
                 'state': state}
         return json
 
     def process_command(self):
-        for json_c in self.json_command:
-            seat_id = json_c['seat_id']
-            state = json_c['state']
-            uart_send = self.calculate_controller(seat_id)
-            json_command = self.build_uart_command(seat_id, state)
-            self.serial_handler.send_uart(json_command, uart_send)
+        print self.json_command
+        seat_id = self.json_command['seat_id']
+        state = self.json_command['state']
+        uart_send = self.calculate_controller(seat_id)
+        json_command = self.build_uart_command(seat_id, state)
+        self.serial_handler.send_uart(json_command, uart_send)
