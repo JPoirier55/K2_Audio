@@ -3,6 +3,7 @@ import select
 import json
 from threading import Thread
 import time
+import udp_client
 
 class SerialReceiveHandler:
     def __init__(self, baudrate=115200, timeout=None):
@@ -19,7 +20,7 @@ class SerialReceiveHandler:
             ser = serial.Serial(uart, baudrate=115200, timeout=self.timeout)
             sers.append(ser)
           except serial.SerialException as e:
-            print 'Serial Exception Thrown:  ', e
+            print 'Serial Exception Thrown on connection:  ', e
             continue
           
         return sers
@@ -27,11 +28,11 @@ class SerialReceiveHandler:
     def listen_serial(self, sers):
         while 1:
           readable, writable, exceptional = select.select(sers, [], sers)
-          for s in readable:
-            if s.inWaiting()>0:
+          for serial_connection in readable:
+            if serial_connection.inWaiting()>0:
               try:
-                var = s.readline()
-                print 'incoming: ', s.port, ' ', var
+                incoming_message = serial_connection.readline()
+                udp_client.handle_message(incoming_message)
               except serial.SerialException as e:
                 print 'Cannot read line, Serial Exception Thrown:  ', e
                 continue
@@ -50,6 +51,7 @@ class SerialReceiveHandler:
           
     def handle(self, data):
         print ' handling data: ', data        
+
 
 if __name__ == '__main__':
     SerialReceiveHandler()

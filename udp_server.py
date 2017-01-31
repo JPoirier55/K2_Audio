@@ -1,25 +1,15 @@
 import SocketServer
 import sys, os
 import argparse
-import socket
-import uart
+import uart_client
 
 class UDPHandler(SocketServer.BaseRequestHandler):
     def handle(self):
       data = self.request[0].strip()
       print data
       socket = self.request[1]
-      command_handler = uart.CommandHandler(data)
-      command_handler.process_command()
-        
-class UDPSender:
-    def __init__(self, host, port):
-      self.host = host
-      self.port = port
-      self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-      
-    def send_datagram(self, message):
-      self.sock.sendto(message + "\n", (self.host, self.port))
+      uart_client.CommandHandler(data).process_command()
+
       
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Provide port and host for UDP server')
