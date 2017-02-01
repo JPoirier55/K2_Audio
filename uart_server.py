@@ -20,7 +20,7 @@ class SerialReceiveHandler:
             ser = serial.Serial(uart, baudrate=115200, timeout=self.timeout)
             sers.append(ser)
           except serial.SerialException as e:
-            print 'Serial Exception Thrown on connection:  ', e
+            #print 'Serial Exception Thrown on connection:  ', e
             continue
           
         return sers

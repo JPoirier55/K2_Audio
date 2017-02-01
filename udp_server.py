@@ -1,14 +1,14 @@
 import SocketServer
 import sys, os
 import argparse
-import uart_client
+#import uart_client
 
 class UDPHandler(SocketServer.BaseRequestHandler):
     def handle(self):
       data = self.request[0].strip()
       print data
       socket = self.request[1]
-      uart_client.CommandHandler(data).process_command()
+      #uart_client.CommandHandler(data).process_command()
 
       
 if __name__ == '__main__':
@@ -18,5 +18,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     HOST,PORT = args.h, args.p
+    print HOST, PORT
     server = SocketServer.UDPServer((HOST, int(PORT)), UDPHandler)
     server.serve_forever()
