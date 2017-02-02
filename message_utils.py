@@ -2,7 +2,11 @@ import serial
 import select
 import json
 from copy import deepcopy
+import subprocess
+import sys
 import time
+import status_utils
+from button_led_map import map_arrays
 
 FIRMWARE_VERSION = "001"
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
@@ -14,23 +18,6 @@ def send_uart(json_command, uart_port):
     ser.write(json.dumps(json_command) + '\n')
     time.sleep(.1)
     ser.close()
-
-def check_status():
-    """
-      Need to set some status protocols for bbb with response codes
-      check uarts
-      check power
-      check system functionality
-      need restart?
-      
-    """
-    board = True
-    if board:
-      return 1
-    elif not board:
-      return 2
-    else:
-      return 0
       
 def error_response(error_id):
     error_descs = ['Invalid category or component.', 
@@ -93,23 +80,16 @@ class MessageHandler:
         response['value'] = self.fw_version
         return response
       elif self.json_request['component_id'] == "STS":
-        status_value = check_status()
-        response['value'] = status_value
+        response['value'] =  status_utils.check_status()
         return response
       else:
         return error_response(1)
     
-    def calculate_uart_port(self, seat_id):
-      if seat_id > 0 and seat_id <= 23:
-        return self.uart_ports[0]
-      elif seat_id > 23 and seat_id <= 83:
-        return self.uart_ports[1]
-      elif seat_id > 83 and seat_id <= 143:
-        return self.uart_ports[2]
-      elif seat_id > 143 and seat_id <= 203:
-        return self.uart_ports[3]
-      else:
-        return None       
+    def translate_uart_port(self, panel_id):
+      return self.uart_ports[map_arrays['micro'][panel_id]]
+      
+    def translate_logical_id(self, component_id):
+      return map_arrays['logical'][component_id-1]      
     
     def run_button_cmd(self):
       response = deepcopy(self.json_request)
@@ -120,7 +100,9 @@ class MessageHandler:
               int(self.json_request['component_id'])
           except Exception as e:
             return error_response(1)
-          uart_port = self.calculate_uart_port(int(self.json_request['component_id']))
+          uart_port = self.translate_uart_port(int(self.json_request['component_id']))
+          logical_id = self.translate_logical_id(self.json_request['component'])
+          ##create method to handle sending correct msg to micro
           if not uart_port:
             return error_response(2)
           send_uart(self.json_request, uart_port)
@@ -137,7 +119,7 @@ class MessageHandler:
           for led in led_array:
             request = self.json_request
             request['component_id'] = led
-            uart_port = self.calculate_uart_port(int(led))
+            uart_port = self.translate_uart_port(int(led))
             send_uart(request, uart_port)
         else:
           return error_response(1)
