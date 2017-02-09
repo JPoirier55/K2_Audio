@@ -19,7 +19,6 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
       try:
         json_data = json.loads(self.data)
         if all (key in json_data for key in ("action", "category", "component_id", "value")):
-          print 'ok'
           msg = MessageHandler(json_data)
           response = msg.process_command()
           self.request.sendall(json.dumps(response))
