@@ -167,7 +167,7 @@ class MessageHandler:
     
     def run_button_cmd(self):
       command = deepcopy(self.json_request)
-      response = deepcopy(self.json_request)
+      response = deepcopy(self.json_request) 
       response['action'] = "="
       
       command_array = {}
