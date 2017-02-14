@@ -1,6 +1,6 @@
 import SocketServer
 import json
-from scripts.message_utils import MessageHandler, error_response
+from message_utils import MessageHandler, error_response
 import argparse
 
 
