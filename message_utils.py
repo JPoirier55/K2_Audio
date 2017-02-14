@@ -14,9 +14,9 @@ UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 
 def send_uart(json_command, uart_port):
     print 'sending: ', json.dumps(json_command), uart_port
-    ser = serial.Serial(uart_port, baudrate=115200, timeout=None)
-    ser.write(json.dumps(json_command) + '\n')
-    time.sleep(.01)
+    ser = serial.Serial('/dev/ttyO4', baudrate=115200, timeout=None)
+    ser.write(json.dumps(json_command) + "\r\n")
+    time.sleep(.05)
     ser.close()
       
 def error_response(error_id):
@@ -53,7 +53,7 @@ def translate_cfg_cmd(command):
     elif comp == 'CYC' and cid == 'FST':
       micro_cmd['category'] = 'F_DCYC'
     else:
-      micro_cmd['category'] = 'ENC_SEN'
+      micro_cmd['category'] = 'E_SENS'
       
     return micro_cmd
     
@@ -62,9 +62,9 @@ def translate_enc_cmd(command):
     micro_cmd = {'value': command['value']}
     
     if comp == 'DIS':
-      micro_cmd['category'] = 'ENC_DIS'
+      micro_cmd['category'] = 'E_DISP'
     else:
-      micro_cmd['category'] = 'ENC_POS'
+      micro_cmd['category'] = 'E_POSI'
     return micro_cmd
       
 def split_id_array(id_array):
@@ -95,7 +95,7 @@ def button_command_array_handler(command):
     for micro_num,cid_array in cid_arrays.iteritems():
       uart_port = UART_PORTS[int(micro_num[-1])]
       command_array[uart_port] = []
-      micro_command = {'category': 'BTN_LED',
+      micro_command = {'category': 'BN_LED',
                        'id': cid_array,
                        'value': command['value']}
       if len(cid_array) > 16:
@@ -127,7 +127,7 @@ class MessageHandler:
     def process_command(self):
       if self.category == "CFG":
         response = self.run_config_cmd()
-      elif self.category == "SYS":
+      elif self.category == "STS":
         response = self.run_status_cmd()
       elif self.category == "BTN":
         response = self.run_button_cmd()
@@ -138,6 +138,8 @@ class MessageHandler:
       return response
       
     def run_config_cmd(self):
+      #should be some type of try except, for when there is an
+      #error sending the cmd to micro
       uart_port = UART_PORTS[0]
       micro_cmd = translate_cfg_cmd(self.json_request)
       send_uart(micro_cmd, uart_port)
@@ -146,6 +148,8 @@ class MessageHandler:
       return response 
      
     def run_encoder_cmd(self):
+      #should be some type of try except, for when there is an
+      #error sending the cmd to micro
       uart_port = UART_PORTS[0]
       micro_cmd = translate_enc_cmd(self.json_request)
       send_uart(micro_cmd, uart_port)
@@ -182,14 +186,16 @@ class MessageHandler:
           for micro_command in command_array[uart_port]:
             send_uart(micro_command, uart_port)
       elif comp == 'LED' and cid == 'ALL':
-        micro_command = {'category': 'BTN_LED',
+        micro_command = {'category': 'BN_LED',
                          'id': cid,
                          'value': val}
         for uart_port in self.uart_ports:
             send_uart(micro_command, uart_port)
-      elif comp == 'LED' and isinstance(cid, int):
-        micro_command = {'category': 'BTN_LED',
+            time.sleep(0.05)
+      elif comp == 'LED':
+        micro_command = {'category': 'BN_LED',
                          'id': cid,
                          'value': val}
+        send_uart(micro_command, '');
       return response
     
