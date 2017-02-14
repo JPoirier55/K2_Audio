@@ -2,6 +2,8 @@ import unittest
 from message_utils import *
 import json
 from button_led_map import map_arrays
+import socket
+import SocketServer
 
 TEST_MAP = {'panel': [1,2,3,4],
              'micro': [0,2,1,3],
@@ -25,7 +27,10 @@ TEST_CMD1 = {'category': 'BTN',
             'action': 'SET',
             'value': '1',
             }
-
+TEST_CMD2 = '''{"category": "BTN","component": "LED","component_id": ["34", "35", "123", "203","78","56","25","201","106"],"action": "SET", "value":"1"}'''
+CMD_RESP = '''{"category": "BTN", "action": "=", "component_id": ["34", "35", "123", "203", "78", "56", "25", "201", "106"], "component": "LED", "value": "1"}
+'''
+   
 
 class TestButtonMapping(unittest.TestCase):
   
@@ -55,17 +60,30 @@ class TestButtonMapping(unittest.TestCase):
   def test_split_array(self):
     arr = TEST_CMD1['component_id']
     id_arrays = split_id_array(arr)
-    print id_arrays
     num_full = len(arr)/16
     left = len(arr)%16
     count = 0
-    
+    last_len = 0
     for arr in id_arrays:
       if len(arr) == 16:
         count += 1
+      else:
+        last_len = len(arr)
         
     self.assertEquals(count, num_full)
-    #self.assertEquals(len(id_arrays.index(-1)), left)
+    self.assertEquals(last_len, left)
+  
+  def test_tcp_server(self):
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+      client.connect(('0.0.0.0', 65005))
+      client.sendall(TEST_CMD2)
+      rec = client.recv(1024)
+      self.assertEquals(rec+'\n', CMD_RESP)
+    finally:
+      client.close()
+
+  
     
     
 if __name__ == '__main__':
