@@ -191,7 +191,6 @@ class MessageHandler:
                          'value': val}
         for uart_port in self.uart_ports:
             send_uart(micro_command, uart_port)
-            time.sleep(0.05)
       elif comp == 'LED':
         micro_command = {'category': 'BN_LED',
                          'id': cid,

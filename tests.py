@@ -1,7 +1,7 @@
 import unittest
-from message_utils import *
+from scripts.message_utils import *
 import json
-from button_led_map import map_arrays
+from scripts.button_led_map import map_arrays
 import socket
 import SocketServer
 
