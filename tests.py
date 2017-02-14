@@ -1,6 +1,7 @@
 import unittest
 from message_utils import *
 import json
+from button_led_map import map_arrays
 
 TEST_MAP = {'panel': [1,2,3,4],
              'micro': [0,2,1,3],
@@ -43,9 +44,29 @@ class TestButtonMapping(unittest.TestCase):
     self.assertEquals(translate_logical_id(122), 59)
     
   def test_array(self):
-    msg = MessageHandler(TEST_CMD1)
-    msg.process_command()
-
-
+    button_cmd_array = button_command_array_handler(TEST_CMD1)
+    self.assertEquals(len(button_cmd_array), 4)
+    for key,value in button_cmd_array.iteritems():
+      self.assertEquals(value[0]['category'], 'BN_LED')
+      self.assertEquals(value[0]['value'], '1')
+      for i in value[0]['id']:
+        self.assertEquals(UART_PORTS[map_arrays['micro'][int(i)-1]], key)
+  
+  def test_split_array(self):
+    arr = TEST_CMD1['component_id']
+    id_arrays = split_id_array(arr)
+    print id_arrays
+    num_full = len(arr)/16
+    left = len(arr)%16
+    count = 0
+    
+    for arr in id_arrays:
+      if len(arr) == 16:
+        count += 1
+        
+    self.assertEquals(count, num_full)
+    #self.assertEquals(len(id_arrays.index(-1)), left)
+    
+    
 if __name__ == '__main__':
   unittest.main()
