@@ -17,11 +17,11 @@ c =    {"category": "BN_LED", "id": "34", "value": "1"}
 arr = [cmd,cmd2,cmd3,cmd4,cmd5,cmd6,cmd7,cmd8]
 test = {'BN_LED': "test"}
 #print ':'.join(x.encode('hex') for x in test)
-ser = serial.Serial('/dev/ttyO4', 115200)
+ser = serial.Serial('/dev/ttyO5', 921600)
 
 for c in arr:
   print 'sending ', c
   ser.write(json.dumps(c)+"\r\n")
-  time.sleep(.05)
+  #time.sleep(.1)
 
 ser.close()

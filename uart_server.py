@@ -3,7 +3,7 @@ import select
 import json
 from threading import Thread
 import time
-#import udp_client
+from tcp_client import MicroMessageHandler
 
 class SerialReceiveHandler:
     def __init__(self, baudrate=115200, timeout=None):
@@ -21,7 +21,7 @@ class SerialReceiveHandler:
             ser = serial.Serial(uart, baudrate=115200, timeout=self.timeout)
             sers.append(ser)
           except serial.SerialException as e:
-            print 'Serial Exception Thrown on connection:  ', e
+            print 'Serial Exception Thrown on connection: ', e
             continue
           
         return sers
@@ -30,14 +30,17 @@ class SerialReceiveHandler:
         while 1:
           readable, writable, exceptional = select.select(sers, [], sers)
           for serial_connection in readable:
-            if serial_connection.inWaiting()>0:
-              try:
-                incoming_message = serial_connection.readline()
-                print incoming_message
-                #udp_client.handle_message(incoming_message)
-              except serial.SerialException as e:
-                print 'Cannot read line, Serial Exception Thrown:  ', e
-                continue
+            #if serial_connection.inWaiting()>0:
+            try:
+              incoming_message = serial_connection.readline()
+              print "Incoming uart message: ", incoming_message
+              #json_message = json.loads(incoming_message)
+              msg_handler = MicroMessageHandler(incoming_message)
+              msg_handler.handle_message()
+             
+            except serial.SerialException as e:
+              print 'Cannot read line, Serial Exception Thrown:  ', e
+              continue
         
     def setup_threads(self, sers):
         for ser in sers:
