@@ -1,3 +1,17 @@
+"""
+FILE:   message_utils.py
+DESCRIPTION: Set of utility functions used for handling
+and processing the messages that come from the DSP and require
+manipulation before sending to micros.
+
+WRITTEN BY: Jake Poirier
+
+MODIFICATION HISTORY:
+
+date           programmer         modification
+-----------------------------------------------
+1/25/17          JDP                original
+"""
 import serial
 import select
 import json
@@ -236,6 +250,12 @@ class MessageHandler:
         return response
      
     def run_encoder_cmd(self):
+        """
+        Run the set of encoder commands, which
+        include changing the sensitivity as well
+        as the position of the encoder
+        @return: Encoder response to DSP
+        """
         # TODO: should be some type of try except, for when there is an error sending the cmd to micro
 
         uart_port = UART_PORTS[0]
@@ -246,20 +266,31 @@ class MessageHandler:
         return response
 
     def run_status_cmd(self):
+        """
+        Run the status command on the system.
+        Runs status_utils check_status method which
+        checks memory availability as well as other
+        key system status reports
+        @return: Status command response to DSP
+        """
         response = self.json_request
         response['action'] = "="
         if self.json_request['component_id'] == "FW":
             response['value'] = self.fw_version
             return response
         elif self.json_request['component_id'] == "STS":
-            response['value'] =  status_utils.check_status()
+            response['value'] = status_utils.check_status()
             return response
         else:
             return error_response(1)
 
     def run_button_cmd(self):
         """
-
+        Run command with a single LED, Switch or list
+        of LEDs or Switches, or using ALL which
+        results in all LEDs turning on. This command will
+        split and allocate all incoming panel_ids into <16
+        len arrays
         @return:
         """
         command = deepcopy(self.json_request)

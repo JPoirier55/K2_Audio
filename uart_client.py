@@ -1,24 +1,38 @@
+"""
+FILE:   uart_client.py
+DESCRIPTION: Methods for handling sending
+uart data out from the bb to the micros
+
+WRITTEN BY: Jake Poirier
+
+MODIFICATION HISTORY:
+
+date           programmer         modification
+-----------------------------------------------
+2/1/17          JDP                original
+"""
 import serial
 import json
 
 
 class SerialSendHandler:
-    """
-      Class to handle all outgoing serial 
-      messages to controllers
-      
-      args: baudrate-default 115200
-            timeout-default None (allows no waiting on sending)
-    """
     def __init__(self, baudrate=115200, timeout=None):
+        """
+        Init baudrate and timeout for serial
+        @param baudrate: baudrate, default 115200
+        @param timeout: timeout, default None
+        """
         self.baudrate = baudrate
         self.timeout = timeout
 
-    def test_connection(self):
-        if self.port.is_open():
-            return True
-
     def send_uart(self, json_command, uart_send):
+        """
+        Connect to serial connection and send command.
+        Then close serial connection
+        @param json_command: Command to be sent to uart
+        @param uart_send: port to write command to
+        @return: None
+        """
         print 'sending: ', json.dumps(json_command), uart_send, " ", self.baudrate
 
         ser = serial.Serial(uart_send, baudrate=self.baudrate, timeout=self.timeout)
@@ -27,14 +41,11 @@ class SerialSendHandler:
 
 
 class CommandHandler:
-    """
-      Class to setup what the outgoing
-      uart command will look like
-      
-      args: command - incoming json string with null at end
-      
-    """
     def __init__(self, command):
+        """
+        Initialize the uart list and slice
+        @param command:
+        """
         self.uarts = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
         # Slice off null character from end
         self.json_command = json.loads(command[0:-1])

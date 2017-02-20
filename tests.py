@@ -1,3 +1,17 @@
+"""
+FILE:   tests.py
+DESCRIPTION: Set of unit tests for methods. Verifies functionality
+of most small methods as well as testing for correct responses
+from methods
+
+WRITTEN BY: Jake Poirier
+
+MODIFICATION HISTORY:
+
+date           programmer         modification
+-----------------------------------------------
+2/1/17          JDP                original
+"""
 import unittest
 from message_utils import *
 import json
