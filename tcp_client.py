@@ -1,32 +1,64 @@
+"""
+FILE:   tcp_client.py
+DESCRIPTION: TCP client module to handle messages from micro->beaglebone->DSP
+WRITTEN BY: Jake Poirier
+
+MODIFICATION HISTORY:
+
+date           programmer         modification
+-----------------------------------------------
+2/10/17          JDP                original
+"""
+
 import socket
 import json
 import binascii
 
-HOST,PORT = '0.0.0.0', 65001
+HOST, PORT = '0.0.0.0', 65000
+
 
 class MicroMessageHandler:
 
-  def __init__(self, message):
-    self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    self.socket.connect((HOST,PORT))
-    
-    self.message = message
-    self.category = self.message[0:6]
-    self.cid = self.message[7:10]
-    self.value = self.message[11:14]
-  
-  def handle_message(self):
-    if self.category == 'BTN_SW':
-      build_dict = {'category': 'BTN',
-                    'component': 'SW',
-                    'component_id': self.cid,
-                    'action': '=',
-                    'value': self.value}
-    
-    tcp_message = json.dumps(build_dict)
-    self.send_tcp(tcp_message)
-  
-  def send_tcp(self, tcp_message):
-    self.socket.sendall(tcp_message)
-    self.socket.close()
-    
+    def __init__(self, message):
+        """
+        Initialize socket connection to DSP
+        host and port. Parse message into
+        category, cid and value when class is
+        instantiated
+        @param message: Incoming message from the
+        micro
+        """
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((HOST, PORT))
+
+        self.message = message
+        self.category = self.message[0:6]
+        self.cid = self.message[7:10]
+        self.value = self.message[11:14]
+
+    def handle_message(self):
+        """
+        Converter method which takes in micro
+        command and converts it back into JSON
+        for sending to DSP
+        @return: None
+        """
+        if self.category == 'BTN_SW':
+            build_dict = {'category': 'BTN',
+                          'component': 'SW',
+                          'component_id': self.cid,
+                          'action': '=',
+                          'value': self.value}
+
+            tcp_message = json.dumps(build_dict)
+            self.send_tcp(tcp_message)
+
+    def send_tcp(self, tcp_message):
+        """
+        Send tcp back to DSP after building
+        message from micro
+        @param tcp_message: JSON message to DSP
+        @return: None
+        """
+        self.socket.sendall(tcp_message)
+        self.socket.close()
