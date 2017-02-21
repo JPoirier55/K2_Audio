@@ -31,10 +31,10 @@ import SocketServer
 import serial
 import time
 
-THREADNUM = 8
 ser = serial.Serial('/dev/ttyO5', 115200)
 
 q = Queue.Queue()
+
 
 def worker():
     while True:
@@ -46,26 +46,21 @@ def worker():
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
     def handle(self):
-        data = self.request.recv(1024)
-        q.put(data)
+        self.data = self.request.recv(1024)
         cur_thread = threading.current_thread()
-        response = "{}: {}".format(cur_thread.name, data)
-        self.request.sendall("response")
 
-        # json_data = json.loads(self.data)
-                    # if all(key in json_data for key in ("action", "category", "component", "component_id", "value")):
-                    #     msg = MessageHandler(json_data)
-                    #     print 'Adding msg to queue:', json_data
-                    #     QUEUE_HANDLER.enqueue(msg, self.request)
-                    #     #response = msg.process_command()
-                    #     #self.request.sendall(json.dumps(response))
-                    # else:
-                    #     self.request.sendall(json.dumps(error_response(1)) + '\n')
+        json_data = json.loads(self.data)
+        if all(key in json_data for key in ("action", "category", "component", "component_id", "value")):
+            msg = MessageHandler(json_data)
+            response, uart_command = msg.process_command()
+            q.put(uart_command)
+            self.request.sendall(json.dumps(response))
+        else:
+            self.request.sendall(json.dumps(error_response(1)) + '\n')
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
-
 
 
 if __name__ == "__main__":
@@ -85,6 +80,7 @@ if __name__ == "__main__":
     queue_thread.daemon = True
     queue_thread.start()
     print "Server loop running in thread:", server_thread.name
+    print 'queue_thread running in thread: ', queue_thread.name
 
     # client(ip, port, "Hello World 1")
     # client(ip, port, "Hello World 2")
