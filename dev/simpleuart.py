@@ -1,6 +1,6 @@
 import serial
 
-ser = serial.Serial('/dev/ttyO2', 115200)
+ser = serial.Serial('/dev/ttyO5', 115200)
 
 while 1:
   var = ser.readline()

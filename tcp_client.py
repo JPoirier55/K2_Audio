@@ -14,7 +14,7 @@ import socket
 import json
 import binascii
 
-HOST, PORT = '0.0.0.0', 65000
+HOST, PORT = '0.0.0.0', 65001
 
 
 class MicroMessageHandler:
@@ -44,14 +44,7 @@ class MicroMessageHandler:
         @return: None
         """
         if self.category == 'BTN_SW':
-            build_dict = {'category': 'BTN',
-                          'component': 'SW',
-                          'component_id': self.cid,
-                          'action': '=',
-                          'value': self.value}
-
-            tcp_message = json.dumps(build_dict)
-            self.send_tcp(tcp_message)
+            print 'btn switch'
 
     def send_tcp(self, tcp_message):
         """
