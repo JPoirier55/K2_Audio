@@ -1,7 +1,7 @@
 import json
 
 ex_packet = "BTN_SW 034 001"
-
+s
 def parse_packet(packet):
   cmd = packet[0:5]
   cid = packet[7:10]
