@@ -13,11 +13,8 @@ date           programmer         modification
 1/25/17          JDP                original
 """
 import serial
-import select
 import json
 from copy import deepcopy
-import subprocess
-import sys
 import time
 import status_utils
 from button_led_map import map_arrays
@@ -28,14 +25,16 @@ UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 
 def send_uart(json_command, uart_port):
     """
+
+    **DEPRECATED**
+
     Simple uart sending method, possibly deprecated
     in the near future for something more robust
     @param json_command: Incoming json command to be sent
     @param uart_port: Port to send data to
     @return: None
     """
-    # print 'sending: ', json.dumps(json_command), uart_port
-    ser = serial.Serial('/dev/ttyO4', baudrate=115200, timeout=None)
+    ser = serial.Serial(uart_port, baudrate=115200, timeout=None)
     ser.write(json.dumps(json_command) + "\r\n")
     time.sleep(.05)
     ser.close()
@@ -58,7 +57,7 @@ def error_response(error_id):
                 'value': str(error_id),
                 'description': error_descs[error_id-1]}
     
-    return response
+    return response, (None, None)
 
 
 def translate_uart_port(panel_id):
@@ -94,19 +93,19 @@ def translate_cfg_cmd(command):
     """
     comp = command['component']
     cid = command['component_id']
-    micro_cmd = {'value': command['value']}
+    value = command['value']
       
     if comp == 'RTE' and cid == 'SLO':
-        micro_cmd['category'] = 'S_RATE'
+        category = 'S_RATE'
     elif comp == 'RTE' and cid == 'FST':
-        micro_cmd['category'] = 'F_RATE'
+        category = 'F_RATE'
     elif comp == 'CYC' and cid == 'SLO':
-        micro_cmd['category'] = 'S_DCYC'
+        category = 'S_DCYC'
     elif comp == 'CYC' and cid == 'FST':
-        micro_cmd['category'] = 'F_DCYC'
+        category = 'F_DCYC'
     else:
-        micro_cmd['category'] = 'E_SENS'
-      
+        category = 'E_SENS'
+    micro_cmd = category + " " + cid + " " + value
     return micro_cmd
 
 
@@ -120,12 +119,14 @@ def translate_enc_cmd(command):
     @return: new micro command
     """
     comp = command['component']
-    micro_cmd = {'value': command['value']}
+    cid = command['component_id']
+    value = command['value']
     
     if comp == 'DIS':
-      micro_cmd['category'] = 'E_DISP'
+      category = 'E_DISP'
     else:
-      micro_cmd['category'] = 'E_POSI'
+      category = 'E_POSI'
+    micro_cmd = category + " " + cid + " " + value
     return micro_cmd
 
 
@@ -168,6 +169,19 @@ def allocate_micro_cmds(command):
     return micro_commands
 
 
+def array_to_string(array):
+    """
+    Simple method to convert array
+    to string sep by whitespace
+    @param array: incoming array
+    @return: string of array
+    """
+    string = ""
+    for element in array:
+        string += str(element) + " "
+    return string
+
+
 def button_command_array_handler(command):
     """
     Takes incoming command with an array of BTN IDs
@@ -175,37 +189,62 @@ def button_command_array_handler(command):
     of 16 len BTN ids, and put them to the corresponding
     micro based on the logical ids for each id.
     @param command: DSP cmd with array of panel_ids
-    @return: Dict with set of messages
-
+    @return: Dict with uart ports and strings for micro
+    commands
     """
     command_array = {}
     logical_ids = []
-    
+    value = command['value']
+
     for id in command['component_id']:
         logical_ids.append(translate_logical_id(id))
     
     cid_arrays = allocate_micro_cmds(command)
+
     for micro_num, cid_array in cid_arrays.iteritems():
         uart_port = UART_PORTS[int(micro_num[-1])]
         command_array[uart_port] = []
-        micro_command = {'category': 'BN_LED',
-                         'id': cid_array,
-                         'value': command['value']}
         if len(cid_array) > 16:
-            id_arrays = split_id_array(micro_command['id'])
+            id_arrays = split_id_array(cid_array)
             for id_array in id_arrays:
-                micro_command['id'] = id_array
-                command_array[uart_port].append((deepcopy(micro_command)))
+                cmd = "BN_LED " + str(id_array) + " " + value
+                command_array[uart_port].append(cmd)
         elif len(cid_array) <= 0:
             pass
         elif len(cid_array) == 1:
-            micro_command['id'] = micro_command['id'][0]
-            command_array[uart_port].append(micro_command)
+            cmd = "BN_LED " + str(cid_array[0]) + " " + value
+            command_array[uart_port].append(cmd)
         else:
-            command_array[uart_port].append(micro_command)
-    return command_array
+            cmd = "BN_LED " + array_to_string(cid_array) + " " + value
+            command_array[uart_port].append(cmd)
 
-        
+    return command_array, "ARRAY"
+
+
+def translate_all_led(command):
+    """
+    Translate the command for all LEDs
+    into the proper micro command
+    @param command: incoming json command from DSP
+    @return: String micro command
+    """
+    value = command['value']
+    return "BN_LED ALL " + value, 'ALL'
+
+
+def translate_single_led(command):
+    """
+    Translate the command for a single LED
+    into the proper micro command
+    @param command: incoming json command from DSP
+    @return: String micro command
+    """
+    cid = command['component_id']
+    value = command['value']
+
+    return "BN_LED " + cid + " " + value, translate_logical_id(cid)
+
+
 class MessageHandler:
 
     def __init__(self, json_request):
@@ -224,19 +263,18 @@ class MessageHandler:
         @return: Response back to DSP
         """
         if self.category == "CFG":
-            response = self.run_config_cmd()
+            response, (uart_command, uart_port) = self.run_config_cmd()
         elif self.category == "STS":
-            response = self.run_status_cmd()
+            response, (uart_command, uart_port) = self.run_status_cmd()
         elif self.category == "BTN":
-            response = self.run_button_cmd()
+            response, (uart_command, uart_port) = self.run_button_cmd()
         elif self.category == "ENC":
-            response = self.run_encoder_cmd()
+            response, (uart_command, uart_port) = self.run_encoder_cmd()
         else:
-            response = error_response(1)
-        return response
+            response, (uart_command, uart_port) = error_response(1)
+        return response, (uart_command, uart_port)
       
     def run_config_cmd(self):
-        # TODO: should be some type of try except, for when there is an error sending the cmd to micro
         """
         Run the set of config commands, which
         include firmware and status.
@@ -244,10 +282,9 @@ class MessageHandler:
         """
         uart_port = UART_PORTS[0]
         micro_cmd = translate_cfg_cmd(self.json_request)
-        send_uart(micro_cmd, uart_port)
         response = self.json_request
         response['action'] = "="
-        return response
+        return response, (micro_cmd, uart_port)
      
     def run_encoder_cmd(self):
         """
@@ -256,14 +293,11 @@ class MessageHandler:
         as the position of the encoder
         @return: Encoder response to DSP
         """
-        # TODO: should be some type of try except, for when there is an error sending the cmd to micro
-
         uart_port = UART_PORTS[0]
         micro_cmd = translate_enc_cmd(self.json_request)
-        send_uart(micro_cmd, uart_port)
         response = self.json_request
         response['action'] = "="
-        return response
+        return response, (micro_cmd, uart_port)
 
     def run_status_cmd(self):
         """
@@ -277,10 +311,10 @@ class MessageHandler:
         response['action'] = "="
         if self.json_request['component_id'] == "FW":
             response['value'] = self.fw_version
-            return response
+            return response, ("FW", None)
         elif self.json_request['component_id'] == "STS":
             response['value'] = status_utils.check_status()
-            return response
+            return response, ("STS", None)
         else:
             return error_response(1)
 
@@ -296,27 +330,18 @@ class MessageHandler:
         command = deepcopy(self.json_request)
         response = deepcopy(self.json_request)
         response['action'] = "="
-        micro_command = ""
-        command_array = []
 
         comp = command['component']
         cid = command['component_id']
-        val = command['value']
-      
+
         if comp == 'LED' and isinstance(cid, list):
-            command_array = button_command_array_handler(command)
-            for uart_port in command_array:
-                for micro_command in command_array[uart_port]:
-                    send_uart(micro_command, uart_port)
+            micro_command, uart_port = button_command_array_handler(command)
+            return response, (micro_command, uart_port)
         elif comp == 'LED' and cid == 'ALL':
-            micro_command = {'category': 'BN_LED',
-                             'id': cid,
-                             'value': val}
-            for uart_port in UART_PORTS:
-                send_uart(micro_command, uart_port)
+            micro_command, uart_port = translate_all_led(command)
+            return response, (micro_command, uart_port)
         elif comp == 'LED':
-            micro_command = {'category': 'BN_LED',
-                             'id': cid,
-                             'value': val}
-            send_uart(micro_command, '')
-        return response
+            micro_command, uart_port = translate_single_led(command)
+            return response, (micro_command, uart_port)
+        else:
+            return error_response(1)

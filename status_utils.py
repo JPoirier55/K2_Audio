@@ -30,6 +30,8 @@ def check_status():
       check system functionality
       need restart?
       Have warnings
+      Have a log of errors or number of errors that have happened in the last x hours
+      Keep a log of errors? Have access through ui?
       
     """
     mem_error = check_memory()
