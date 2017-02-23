@@ -241,8 +241,10 @@ def translate_single_led(command):
     """
     cid = command['component_id']
     value = command['value']
+    print cid
+    print translate_uart_port(int(cid))
 
-    return "BN_LED " + cid + " " + value, translate_logical_id(cid)
+    return "BN_LED " + cid + " " + value, translate_uart_port(int(cid))
 
 
 class MessageHandler:

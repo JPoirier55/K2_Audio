@@ -23,8 +23,10 @@ import Queue
 import threading
 import SocketServer
 import serial
+import Adafruit_BBIO.GPIO as GPIO
 DEBUG = True
-
+GPIO.setup('P8_8', GPIO.IN)
+GPIO.setup('P')
 
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 GLOBAL_QUEUE = Queue.Queue()
@@ -42,9 +44,11 @@ def worker():
     @return: None
     """
     while True:
-        item = GLOBAL_QUEUE.get()
-        ser = serial.Serial(item[1], 115200)
-        ser.write(str(item[0]) + "\n")
+        GPIO.output("P8_8", GPIO.HIGH)
+        if not GPIO.input("P8_8"):
+            item = GLOBAL_QUEUE.get()
+            ser = serial.Serial(item[1], 115200)
+            ser.write(str(item[0]) + "\r\n")
 
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
@@ -67,12 +71,14 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                 self.request.sendall(json.dumps(response) + '\n')
                 return
             elif uart_port == "ALL":
-                for port in UART_PORTS:
-                    GLOBAL_QUEUE.put((uart_command, port))
+                for uart_port in UART_PORTS:
+                    GLOBAL_QUEUE.put((uart_command, uart_port))
             elif uart_port == "ARRAY":
                 for uart_port, single_uart_command in uart_command.iteritems():
-                    GLOBAL_QUEUE.put((json.dumps(single_uart_command), uart_port))
+                    if len(single_uart_command) > 0:
+                        GLOBAL_QUEUE.put((json.dumps(single_uart_command), uart_port))
             else:
+                print 'Output: ', uart_port
                 GLOBAL_QUEUE.put((uart_command, uart_port))
             self.request.sendall(json.dumps(response))
         else:

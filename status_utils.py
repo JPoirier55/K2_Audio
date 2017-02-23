@@ -25,16 +25,17 @@ def check_status():
     """
       Need to set some status protocols for bbb with response codes
       check uarts - send msg to each micro, check status, return with status of each micro
-      check power - ??
-      check memtotal vs memfree - cat /proc/meminfo or egrep 'MemTotal|MemFree|MemAvailable' /proc/meminfo
+      --check memtotal vs memfree - cat /proc/meminfo or egrep 'MemTotal|MemFree|MemAvailable' /proc/meminfo
       check system functionality
       need restart?
       Have warnings
+      --Check NIC instance - test of ifconfig eth0 down
       Have a log of errors or number of errors that have happened in the last x hours
       Keep a log of errors? Have access through ui?
       
     """
     mem_error = check_memory()
+    nic_error = check_eth0_up()
     
     board = True
     if board:
@@ -43,6 +44,24 @@ def check_status():
         return 2
     else:
         return 0
+
+
+def check_eth0_up():
+    """
+    Checks the state of eth0 to see if
+    it is up or not. Reads /sys/class/net/eth0/operstate
+    for state.
+    @return: nic_error - 1 for error, 0 for no error
+    """
+    nic_error = 0
+    try:
+        val = subprocess.check_output(['sh', 'nic_check.sh'])
+        if val != 'up':
+            nic_error = 1
+    except Exception as e:
+        sys.stderr.write(str(e))
+        pass
+    return nic_error
 
 
 def check_memory():

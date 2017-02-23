@@ -73,7 +73,7 @@ class SerialReceiveHandler:
                 if serial_connection.inWaiting() > 0:
                     try:
                         incoming_message = serial_connection.readline()
-                        print "Incoming uart message: ", incoming_message
+                        print "Incoming uart message: [{0}] ".format(serial_connection.port), incoming_message
                         # json_message = json.loads(incoming_message)
                         # msg_handler = MicroMessageHandler(incoming_message)
                         # msg_handler.handle_message()
