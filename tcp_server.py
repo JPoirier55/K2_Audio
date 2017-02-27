@@ -23,10 +23,7 @@ import Queue
 import threading
 import SocketServer
 import serial
-import Adafruit_BBIO.GPIO as GPIO
 DEBUG = True
-GPIO.setup('P8_8', GPIO.IN)
-GPIO.setup('P')
 
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 GLOBAL_QUEUE = Queue.Queue()
@@ -44,11 +41,9 @@ def worker():
     @return: None
     """
     while True:
-        GPIO.output("P8_8", GPIO.HIGH)
-        if not GPIO.input("P8_8"):
-            item = GLOBAL_QUEUE.get()
-            ser = serial.Serial(item[1], 115200)
-            ser.write(str(item[0]) + "\r\n")
+        item = GLOBAL_QUEUE.get()
+        ser = serial.Serial(item[1], 115200)
+        ser.write(str(item[0]) + "\r\n")
 
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
