@@ -18,6 +18,7 @@ from copy import deepcopy
 import time
 import status_utils
 from button_led_map import map_arrays
+from command_map import *
 
 FIRMWARE_VERSION = "001"
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
@@ -82,7 +83,7 @@ def translate_logical_id(component_id):
     return map_arrays['logical'][(int(component_id))-1]
 
 
-def translate_cfg_cmd(command):
+def translate_cfg_cmd(dsp_command):
     """
     Translated incoming DSP json command to a
     more condensed version to be sent to the micro
@@ -91,21 +92,40 @@ def translate_cfg_cmd(command):
     @param command: DSP json command
     @return: new micro command
     """
-    comp = command['component']
-    cid = command['component_id']
-    value = command['value']
+    comp = dsp_command['component']
+    cid = dsp_command['component_id']
+    action = dsp_command['action']
+    value = dsp_command['value']
       
-    if comp == 'RTE' and cid == 'SLO':
-        category = 'S_RATE'
-    elif comp == 'RTE' and cid == 'FST':
-        category = 'F_RATE'
-    elif comp == 'CYC' and cid == 'SLO':
-        category = 'S_DCYC'
-    elif comp == 'CYC' and cid == 'FST':
-        category = 'F_DCYC'
+    if comp == 'RTE' and cid == 'SLO' and action == 'SET':
+        command = command_dict['set_led_slow_rate']
+    elif comp == 'RTE' and cid == 'SLO' and action == 'GET':
+        command = command_dict['get_led_slow_rate']
+    elif comp == 'RTE' and cid == 'FST' and action == 'SET':
+        command = command_dict['set_led_fast_rate']
+    elif comp == 'RTE' and cid == 'FST' and action == 'GET':
+        command = command_dict['get_led_fast_rate']
+    elif comp == 'CYC' and cid == 'SLO' and action == 'SET':
+        command = command_dict['set_led_slow_dcyc']
+    elif comp == 'CYC' and cid == 'SLO' and action == 'GET':
+        command = command_dict['get_led_slow_dcyc']
+    elif comp == 'CYC' and cid == 'FST' and action == 'SET':
+        command = command_dict['set_led_fast_dcyc']
+    elif comp == 'CYC' and cid == 'FST' and action == 'GET':
+        command = command_dict['get_led_fast_dcyc']
+    elif comp == 'ENC' and cid == 'SEN' and action == 'SET':
+        command = command_dict['set_enc_sens']
+    elif comp == 'ENC' and cid == 'SEN' and action == 'GET':
+        command = command_dict['get_enc_sens']
     else:
-        category = 'E_SENS'
-    micro_cmd = category + " " + cid + " " + value
+        return None
+
+    if action == 'GET':
+        micro_cmd = [start_char, command, stop_char]
+    else:
+        micro_cmd = [start_char, command, value, stop_char]
+    print micro_cmd
+
     return micro_cmd
 
 
@@ -119,14 +139,21 @@ def translate_enc_cmd(command):
     @return: new micro command
     """
     comp = command['component']
-    cid = command['component_id']
     value = command['value']
-    
-    if comp == 'DIS':
-      category = 'E_DISP'
+    action = command['action']
+
+    if comp == 'DIS' and action == 'SET':
+        command = command_dict['set_enc_disp']
+    elif comp == 'DIS' and action == 'GET':
+        command = command_dict['get_enc_disp']
     else:
-      category = 'E_POSI'
-    micro_cmd = category + " " + cid + " " + value
+        return None
+
+    if action == 'SET':
+        micro_cmd = [start_char, command, value, stop_char]
+    else:
+        micro_cmd = [start_char, command, stop_char]
+
     return micro_cmd
 
 

@@ -14,7 +14,7 @@ import socket
 import json
 import binascii
 
-HOST, PORT = '0.0.0.0', 65001
+HOST, PORT = '0.0.0.0', 65500
 
 
 class MicroMessageHandler:
@@ -43,7 +43,11 @@ class MicroMessageHandler:
         for sending to DSP
         @return: None
         """
-        if self.category == 'BTN_SW':
+        if 'BN_LED' in self.message:
+            print 'btn led'
+            self.send_tcp("{\"category\": \"BTN\",\"component\": \"LED\",\"component_id\": \"150\",\"action\": \"=\", \"value\":\"1\"}")
+        if self.category == 'BTN_LED':
+            self.send_tcp("{\"BTN\": \"23\"}")
             print 'btn switch'
 
     def send_tcp(self, tcp_message):

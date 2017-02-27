@@ -70,13 +70,13 @@ class SerialReceiveHandler:
         while 1:
             readable, writable, exceptional = select.select(sers, [], sers)
             for serial_connection in readable:
-                if serial_connection.inWaiting() > 0:
+                #if serial_connection.inWaiting() > 0:
                     try:
                         incoming_message = serial_connection.readline()
                         print "Incoming uart message: [{0}] ".format(serial_connection.port), incoming_message
-                        # json_message = json.loads(incoming_message)
-                        # msg_handler = MicroMessageHandler(incoming_message)
-                        # msg_handler.handle_message()
+
+                        #msg_handler = MicroMessageHandler(incoming_message)
+                        #msg_handler.handle_message()
 
                     except serial.SerialException as e:
                         print 'Cannot read line, Serial Exception Thrown:  ', e

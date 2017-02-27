@@ -20,9 +20,15 @@ import json
 def check_status():
     """
     Checks status of various elements on the beaglebone
+    and micros
     @return: Status id 0,1,2 depending on status
     """
     """
+    TODO: startup script that goes through all status util methods and checks each locally
+        - first startup script to check everything, uses all uarts
+        - second boot up script to start uart server
+        - third startup tcp server and send an initial packet of status?
+
       Need to set some status protocols for bbb with response codes
       check uarts - send msg to each micro, check status, return with status of each micro
       --check memtotal vs memfree - cat /proc/meminfo or egrep 'MemTotal|MemFree|MemAvailable' /proc/meminfo

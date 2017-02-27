@@ -72,7 +72,8 @@ class TestButtonMapping(unittest.TestCase):
         self.assertEquals(translate_logical_id(98), 0)
         self.assertEquals(translate_logical_id(99), 0)
         self.assertEquals(translate_logical_id(122), 59)
-    
+
+    '''
     def test_array(self):
         """
         Test to check validity of algorithm for pulling apart
@@ -87,7 +88,8 @@ class TestButtonMapping(unittest.TestCase):
             self.assertEquals(value[0]['value'], '1')
             for i in value[0]['id']:
                 self.assertEquals(UART_PORTS[map_arrays['micro'][int(i)-1]], key)
-  
+    '''
+
     def test_split_array(self):
         """
         Test to check lengths of arrays that have been split by
@@ -109,6 +111,7 @@ class TestButtonMapping(unittest.TestCase):
         self.assertEquals(count, num_full)
         self.assertEquals(last_len, left)
   
+    '''
     def test_tcp_server(self):
         """
         Simple test to check for tcp server status
@@ -123,6 +126,11 @@ class TestButtonMapping(unittest.TestCase):
             self.assertEquals(rec+'\n', CMD_RESP)
         finally:
             client.close()
+    '''
+
+    def test_hex_returns(self):
+        cmd = {"category": "CFG","component": "CYC","component_id": "SLO","action": "SET", "value":"1"}
+        micro_cmd = translate_cfg_cmd(cmd)
 
 if __name__ == '__main__':
     unittest.main()
