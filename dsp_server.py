@@ -1,11 +1,6 @@
 """
-FILE:   tcp_server.py
-DESCRIPTION: TCP server module which runs on boot and handles incoming
-messages from the DSP through TCP connection.
-
-Can be run through the command line with arguments for HOST (--h) and PORT (--p)
-to start the server running locally or through dev env.
-Currently only supports IPv4
+FILE:   dsp_server.py
+DESCRIPTION: Testing TCP server to simulate DSP
 
 WRITTEN BY: Jake Poirier
 
@@ -13,7 +8,7 @@ MODIFICATION HISTORY:
 
 date           programmer         modification
 -----------------------------------------------
-2/1/17          JDP                original
+2/21/17          JDP                original
 """
 
 import argparse

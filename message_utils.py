@@ -19,6 +19,7 @@ import time
 import status_utils
 from button_led_map import map_arrays
 from command_map import *
+import binascii
 
 FIRMWARE_VERSION = "001"
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
@@ -47,17 +48,17 @@ def error_response(error_id):
     @param error_id: ID of error
     @return: Error response in JSON format
     """
-    error_descs = ['Invalid category or component.', 
-                   'State (parameter) out of range', 
+    error_descs = ['Invalid category or component.',
+                   'State (parameter) out of range',
                    'Command not understood/syntax invalid.']
-    
+
     response = {'category': 'ERROR',
                 'component': '',
                 'component_id': '',
                 'action': '=',
                 'value': str(error_id),
                 'description': error_descs[error_id-1]}
-    
+
     return response, (None, None)
 
 
@@ -96,7 +97,7 @@ def translate_cfg_cmd(dsp_command):
     cid = dsp_command['component_id']
     action = dsp_command['action']
     value = dsp_command['value']
-      
+
     if comp == 'RTE' and cid == 'SLO' and action == 'SET':
         command = command_dict['set_led_slow_rate']
     elif comp == 'RTE' and cid == 'SLO' and action == 'GET':
@@ -121,12 +122,21 @@ def translate_cfg_cmd(dsp_command):
         return None
 
     if action == 'GET':
-        micro_cmd = [start_char, command, stop_char]
+        checksum = 0x00
+        parameters = 0x00
     else:
-        micro_cmd = [start_char, command, value, stop_char]
-    print micro_cmd
+        checksum = 0x00
+        parameters = 0x00
 
+    length = 0x00
+    micro_cmd = "{0}{1}{2}{3}{4}{5}".format(hex_tostring(start_char), hex_tostring(length), hex_tostring(command),
+                                            hex_tostring(parameters), hex_tostring(checksum), hex_tostring(stop_char))
+    print micro_cmd
     return micro_cmd
+
+
+def hex_tostring(hex_num):
+    return hex(hex_num)[2:]
 
 
 def translate_enc_cmd(command):
@@ -141,6 +151,7 @@ def translate_enc_cmd(command):
     comp = command['component']
     value = command['value']
     action = command['action']
+    cid = command['component_id']
 
     if comp == 'DIS' and action == 'SET':
         command = command_dict['set_enc_disp']
@@ -149,11 +160,17 @@ def translate_enc_cmd(command):
     else:
         return None
 
-    if action == 'SET':
-        micro_cmd = [start_char, command, value, stop_char]
+    if action == 'GET':
+        checksum = 0x00
+        parameters = 0x00
     else:
-        micro_cmd = [start_char, command, stop_char]
+        checksum = 0x00
+        parameters = 0x00
 
+    length = 0x00
+    micro_cmd = "{0}{1}{2}{3}{4}{5}".format(hex_tostring(start_char), hex_tostring(length), hex_tostring(command),
+                                            hex_tostring(parameters), hex_tostring(checksum), hex_tostring(stop_char))
+    print micro_cmd
     return micro_cmd
 
 
@@ -222,30 +239,38 @@ def button_command_array_handler(command):
     command_array = {}
     logical_ids = []
     value = command['value']
+    command_byte = command_dict['set_led_list']
+    id_str = ""
+    length = 0x00
+    checksum = 0x00
+    parameters = 0x00
 
     for id in command['component_id']:
         logical_ids.append(translate_logical_id(id))
-    
+
     cid_arrays = allocate_micro_cmds(command)
 
     for micro_num, cid_array in cid_arrays.iteritems():
         uart_port = UART_PORTS[int(micro_num[-1])]
         command_array[uart_port] = []
+        print micro_num, cid_array
         if len(cid_array) > 16:
             id_arrays = split_id_array(cid_array)
             for id_array in id_arrays:
-                cmd = "BN_LED " + str(id_array) + " " + value
-                command_array[uart_port].append(cmd)
+                for id in id_array:
+                    id_str += '{0:0{1}X}'.format(int(id), 2)
         elif len(cid_array) <= 0:
             pass
         elif len(cid_array) == 1:
-            cmd = "BN_LED " + str(cid_array[0]) + " " + value
-            command_array[uart_port].append(cmd)
+            id_str += '{0:0{1}X}'.format(int(cid_array[0]), 2)
         else:
-            cmd = "BN_LED " + array_to_string(cid_array) + " " + value
-            command_array[uart_port].append(cmd)
+            for id in cid_array:
+                id_str += '{0:0{1}X}'.format(int(id), 2)
 
-    return command_array, "ARRAY"
+    parameters = id_str
+    micro_cmd_list = [start_char, length, command_byte, parameters, checksum, stop_char]
+    print finalize_cmd(micro_cmd_list)
+    return finalize_cmd(micro_cmd_list), "ARRAY"
 
 
 def translate_all_led(command):
@@ -255,8 +280,50 @@ def translate_all_led(command):
     @param command: incoming json command from DSP
     @return: String micro command
     """
-    value = command['value']
-    return "BN_LED ALL " + value, 'ALL'
+    parameters = 0xf8
+    checksum = 0x00
+    length = 0x00
+    command_byte = command_dict['set_led_button']
+    micro_cmd_list = [start_char, length, command_byte, parameters, checksum, stop_char]
+
+    print finalize_cmd(micro_cmd_list)
+    return finalize_cmd(micro_cmd_list), 'ALL'
+
+
+def finalize_cmd(micro_cmd_list):
+    length = calculate_length(micro_cmd_list)
+    micro_cmd_list[1] = length
+    checksum = calculate_checksum(micro_cmd_list)
+    micro_cmd_list[4] = checksum
+    temp = []
+    for c in micro_cmd_list:
+        temp.append(c)
+
+    micro_cmd = "{0:0{6}X}{1:0{6}X}{2:0{6}X}{3:0{6}X}{4:0{6}X}{5:0{6}X}".format(temp[0], temp[1], temp[2],
+                                                                                temp[3], temp[4], temp[5], 2)
+    return micro_cmd
+
+
+def calculate_length(cmd_array):
+    try:
+        return len(hex(cmd_array[3]))/2+1
+    except Exception as e:
+        return len(cmd_array[3])
+
+
+def calculate_checksum(cmd_array):
+    checksum = 0
+    print cmd_array[3]
+    try:
+        len(cmd_array[3])
+        binascii.unhexlify(cmd_array[3])
+        print 'logner'
+    except Exception as e:
+        print 'uuhoh'
+
+        for byte_index in range(len(cmd_array)):
+            checksum += bin(cmd_array[byte_index])[2:].count("1")
+    return checksum
 
 
 def translate_single_led(command):
@@ -266,12 +333,17 @@ def translate_single_led(command):
     @param command: incoming json command from DSP
     @return: String micro command
     """
-    cid = command['component_id']
-    value = command['value']
-    print cid
-    print translate_uart_port(int(cid))
+    parameter = int(command['component_id'])
+    uart_port = UART_PORTS[map_arrays['micro'][int(parameter)]]
 
-    return "BN_LED " + cid + " " + value, translate_uart_port(int(cid))
+    checksum = 0x00
+    length = 0x00
+    command = command_dict['set_led_button']
+    micro_cmd_list = [start_char, length, command, parameter, checksum, stop_char]
+    print micro_cmd_list
+
+    print finalize_cmd(micro_cmd_list)
+    return finalize_cmd(micro_cmd_list), uart_port
 
 
 class MessageHandler:
@@ -284,7 +356,7 @@ class MessageHandler:
         self.component_id = self.json_request['component_id']
         self.action = self.json_request['action']
         self.value = self.json_request['value']
-      
+
     def process_command(self):
         """
         Run the corresponding method based on the
@@ -302,7 +374,7 @@ class MessageHandler:
         else:
             response, (uart_command, uart_port) = error_response(1)
         return response, (uart_command, uart_port)
-      
+
     def run_config_cmd(self):
         """
         Run the set of config commands, which
@@ -314,7 +386,7 @@ class MessageHandler:
         response = self.json_request
         response['action'] = "="
         return response, (micro_cmd, uart_port)
-     
+
     def run_encoder_cmd(self):
         """
         Run the set of encoder commands, which

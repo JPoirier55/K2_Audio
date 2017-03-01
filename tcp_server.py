@@ -58,8 +58,8 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
         self.data = self.request.recv(1024)
         if "{" not in self.data:
             return
-        print "_____", self.data, "  _________"
-        print ':'.join(x.encode('hex') for x in self.data)
+        #print "_____", self.data, "  _________"
+        #print ':'.join(x.encode('hex') for x in self.data)
 
         json_data = json.loads(self.data)
         if all(key in json_data for key in ("action", "category", "component", "component_id", "value")):

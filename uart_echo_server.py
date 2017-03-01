@@ -49,6 +49,7 @@ class SerialReceiveHandler:
             except serial.SerialException as e:
                 print 'Serial Exception Thrown on connection: ', e
                 continue
+
         return sers
 
     def listen_serial(self, sers):
@@ -65,7 +66,9 @@ class SerialReceiveHandler:
             for serial_connection in readable:
                 try:
                     incoming_message = serial_connection.readline()
-                    serial_connection.write(incoming_message + "\n")
+                    print incoming_message
+                    serial_connection.write(incoming_message)
+
                 except serial.SerialException as e:
                     print 'Cannot read line, Serial Exception Thrown:  ', e
                     continue
