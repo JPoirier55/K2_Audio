@@ -240,10 +240,11 @@ def button_command_array_handler(command):
     logical_ids = []
     value = command['value']
     command_byte = command_dict['set_led_list']
-    id_str = ""
-    length = 0x00
-    checksum = 0x00
+    micro_cmd = ""
+    length = '0'
+    checksum = '0'
     parameters = 0x00
+
 
     for id in command['component_id']:
         logical_ids.append(translate_logical_id(id))
@@ -251,6 +252,7 @@ def button_command_array_handler(command):
     cid_arrays = allocate_micro_cmds(command)
 
     for micro_num, cid_array in cid_arrays.iteritems():
+        micro_cmd = "{0:0{3}X}{1}{2:0{3}X}".format(start_char, length, command_byte, 2)
         uart_port = UART_PORTS[int(micro_num[-1])]
         command_array[uart_port] = []
         print micro_num, cid_array
@@ -258,19 +260,25 @@ def button_command_array_handler(command):
             id_arrays = split_id_array(cid_array)
             for id_array in id_arrays:
                 for id in id_array:
-                    id_str += '{0:0{1}X}'.format(int(id), 2)
+                    micro_cmd += '{0:0{1}X}'.format(int(id), 2)
         elif len(cid_array) <= 0:
             pass
         elif len(cid_array) == 1:
-            id_str += '{0:0{1}X}'.format(int(cid_array[0]), 2)
+            micro_cmd += '{0:0{1}X}'.format(int(cid_array[0]), 2)
         else:
             for id in cid_array:
-                id_str += '{0:0{1}X}'.format(int(id), 2)
+                micro_cmd += '{0:0{1}X}'.format(int(id), 2)
 
-    parameters = id_str
-    micro_cmd_list = [start_char, length, command_byte, parameters, checksum, stop_char]
-    print finalize_cmd(micro_cmd_list)
-    return finalize_cmd(micro_cmd_list), "ARRAY"
+        micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+        length = calculate_length(micro_cmd)
+        micro_cmd = micro_cmd[:2] + "{0:0{1}X}".format(length, 2) + micro_cmd[3:]
+        checksum = calculate_checksum(micro_cmd)
+        micro_cmd = micro_cmd[:len(micro_cmd) - 3] + "{0:0{1}X}".format(checksum, 2) + micro_cmd[len(micro_cmd) - 2:]
+        command_array[uart_port].append(micro_cmd)
+
+    print command_array
+
+    return command_array, "ARRAY"
 
 
 def translate_all_led(command):
@@ -280,50 +288,27 @@ def translate_all_led(command):
     @param command: incoming json command from DSP
     @return: String micro command
     """
-    parameters = 0xf8
-    checksum = 0x00
-    length = 0x00
+    parameters = button_numbers['all']
+    length = '0'
+    checksum = '0'
     command_byte = command_dict['set_led_button']
-    micro_cmd_list = [start_char, length, command_byte, parameters, checksum, stop_char]
 
-    print finalize_cmd(micro_cmd_list)
-    return finalize_cmd(micro_cmd_list), 'ALL'
+    micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0{6}X}{4}{5:0{6}X}".format(start_char, length, command_byte,
+                                                                         parameters, checksum, stop_char, 2)
+    length = calculate_length(micro_cmd)
+    micro_cmd = micro_cmd[:2] + "{0:0{1}X}".format(length, 2) + micro_cmd[3:]
+    checksum = calculate_checksum(micro_cmd)
+    micro_cmd = micro_cmd[:len(micro_cmd)-3] + "{0:0{1}X}".format(checksum, 2) + micro_cmd[len(micro_cmd)-2:]
 
-
-def finalize_cmd(micro_cmd_list):
-    length = calculate_length(micro_cmd_list)
-    micro_cmd_list[1] = length
-    checksum = calculate_checksum(micro_cmd_list)
-    micro_cmd_list[4] = checksum
-    temp = []
-    for c in micro_cmd_list:
-        temp.append(c)
-
-    micro_cmd = "{0:0{6}X}{1:0{6}X}{2:0{6}X}{3:0{6}X}{4:0{6}X}{5:0{6}X}".format(temp[0], temp[1], temp[2],
-                                                                                temp[3], temp[4], temp[5], 2)
-    return micro_cmd
+    return micro_cmd, 'ALL'
 
 
-def calculate_length(cmd_array):
-    try:
-        return len(hex(cmd_array[3]))/2+1
-    except Exception as e:
-        return len(cmd_array[3])
+def calculate_length(micro_cmd):
+    return len(micro_cmd[4:len(micro_cmd)-4])
 
 
-def calculate_checksum(cmd_array):
-    checksum = 0
-    print cmd_array[3]
-    try:
-        len(cmd_array[3])
-        binascii.unhexlify(cmd_array[3])
-        print 'logner'
-    except Exception as e:
-        print 'uuhoh'
-
-        for byte_index in range(len(cmd_array)):
-            checksum += bin(cmd_array[byte_index])[2:].count("1")
-    return checksum
+def calculate_checksum(micro_cmd):
+    return bin(int(micro_cmd, 16))[2:].count("1")
 
 
 def translate_single_led(command):
@@ -335,16 +320,27 @@ def translate_single_led(command):
     """
     parameter = int(command['component_id'])
     uart_port = UART_PORTS[map_arrays['micro'][int(parameter)]]
+    length = '0'
+    checksum = '0'
+    command_byte = command_dict['set_led_button']
 
-    checksum = 0x00
-    length = 0x00
-    command = command_dict['set_led_button']
-    micro_cmd_list = [start_char, length, command, parameter, checksum, stop_char]
-    print micro_cmd_list
+    micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0{6}X}{4}{5:0{6}X}".format(start_char, length, command_byte,
+                                                                    parameter, checksum, stop_char, 2)
 
-    print finalize_cmd(micro_cmd_list)
-    return finalize_cmd(micro_cmd_list), uart_port
+    length = calculate_length(micro_cmd)
+    micro_cmd = micro_cmd[:2] + "{0:0{1}X}".format(length, 2) + micro_cmd[3:]
+    checksum = calculate_checksum(micro_cmd)
+    micro_cmd = micro_cmd[:len(micro_cmd) - 3] + "{0:0{1}X}".format(checksum, 2) + micro_cmd[len(micro_cmd) - 2:]
 
+    return micro_cmd, uart_port
+
+
+if __name__ == "__main__":
+    t = {"category": "BTN","component": "LED","component_id":
+        ["34", "35", "123", "203","78","56","25","201","106"],
+         "action": "SET", "value":"1"}
+    button_command_array_handler(t)
+    #translate_all_led("")
 
 class MessageHandler:
 
