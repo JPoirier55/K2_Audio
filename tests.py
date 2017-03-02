@@ -128,9 +128,30 @@ class TestButtonMapping(unittest.TestCase):
             client.close()
     '''
 
-    def test_hex_returns(self):
-        cmd = {"category": "CFG","component": "CYC","component_id": "SLO","action": "SET", "value":"1"}
+    def test_enc_command(self):
+        cmd = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022401107D", '/dev/ttyO1'))
+
+    def test_single_led_command(self):
+        cmd = {"category": "BTN", "component": "LED", "component_id": "155", "action": "SET", "value": "1"}
+        micro_cmd = translate_single_led(cmd)
+        self.assertEquals(micro_cmd, ("7B0440019B147D", '/dev/ttyO1'))
+
+    def test_led_array_command(self):
+        cmd = {"category": "BTN","component": "LED","component_id":
+            ["34", "35", "123", "203","78","56","25","201","106"],"action": "SET", "value":"1"}
+        micro_cmd = translate_led_array(cmd)
+        self.assertEquals(micro_cmd[0]['/dev/ttyO1'], "7B064201CBC91A7D")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO2'], "7B0642014E6A197D")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO4'], "7B084201222338187D")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO5'], "7B0642017B191A7D")
+
+    def test_cfg_command(self):
+        cmd = {"category": "CFG", "component": "CYC", "component_id": "SLO", "action": "SET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022401107D", '/dev/ttyO1'))
+
 
 if __name__ == '__main__':
     unittest.main()
