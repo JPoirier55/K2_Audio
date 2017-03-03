@@ -178,7 +178,7 @@ def translate_led_array(command):
             for id in cid_array:
                 micro_cmd += '{0:0{1}X}'.format(int(id), 2)
 
-        micro_cmd += '0{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+        micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
         micro_cmd = finalize_cmd(micro_cmd)
         command_array[uart_port] = (micro_cmd)
 
@@ -319,6 +319,7 @@ if __name__ == "__main__":
     print translate_cfg_cmd(t2)
     print translate_all_led("")
 
+
 class MessageHandler:
 
     def __init__(self, json_request):
@@ -400,6 +401,7 @@ class MessageHandler:
         split and allocate all incoming panel_ids into <16
         len arrays
         @return:
+
         """
         command = deepcopy(self.json_request)
         response = deepcopy(self.json_request)
