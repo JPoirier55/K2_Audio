@@ -128,10 +128,10 @@ class TestButtonMapping(unittest.TestCase):
             client.close()
     '''
 
-    def test_enc_command(self):
-        cmd = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SET", "value": "1"}
-        micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022401107D", '/dev/ttyO1'))
+    # def test_enc_command(self):
+    #     cmd = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SET", "value": "1"}
+    #     micro_cmd = translate_cfg_cmd(cmd)
+    #     self.assertEquals(micro_cmd, ("7B022401107D", '/dev/ttyO1'))
 
     def test_single_led_command(self):
         cmd = {"category": "BTN", "component": "LED", "component_id": "155", "action": "SET", "value": "1"}
@@ -139,18 +139,71 @@ class TestButtonMapping(unittest.TestCase):
         self.assertEquals(micro_cmd, ("7B0440019B147D", '/dev/ttyO1'))
 
     def test_led_array_command(self):
+        test = "7B0742017B19001B7D"
+        t = bytearray.fromhex(test)
+        for i in t:
+            print bin(i)
+
         cmd = {"category": "BTN","component": "LED","component_id":
             ["34", "35", "123", "203","78","56","25","201","106"],"action": "SET", "value":"1"}
         micro_cmd = translate_led_array(cmd)
-        self.assertEquals(micro_cmd[0]['/dev/ttyO1'], "7B064201CBC91A7D")
-        self.assertEquals(micro_cmd[0]['/dev/ttyO2'], "7B0642014E6A197D")
-        self.assertEquals(micro_cmd[0]['/dev/ttyO4'], "7B084201222338187D")
-        self.assertEquals(micro_cmd[0]['/dev/ttyO5'], "7B0642017B191A7D")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO1'], "7B074201CBC901B7D")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO2'], "7B0742014E6A01A7D")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO4'], "7B0942012223380197D")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO5'], "7B0742017B1901B7D")
 
-    def test_cfg_command(self):
+    def test_slow_dcyc_command(self):
         cmd = {"category": "CFG", "component": "CYC", "component_id": "SLO", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
         self.assertEquals(micro_cmd, ("7B022401107D", '/dev/ttyO1'))
+        cmd = {"category": "CFG", "component": "CYC", "component_id": "SLO", "action": "GET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022501117D", '/dev/ttyO1'))
+
+    def test_fast_dcyc_command(self):
+        cmd = {"category": "CFG", "component": "CYC", "component_id": "FST", "action": "SET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022601117D", '/dev/ttyO1'))
+        cmd = {"category": "CFG", "component": "CYC", "component_id": "FST", "action": "GET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022701127D", '/dev/ttyO1'))
+
+    def test_slow_rate_command(self):
+        cmd = {"category": "CFG", "component": "RTE", "component_id": "SLO", "action": "SET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B0220010F7D", '/dev/ttyO1'))
+        cmd = {"category": "CFG", "component": "RTE", "component_id": "SLO", "action": "GET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022101107D", '/dev/ttyO1'))
+
+    def test_fast_rate_command(self):
+        cmd = {"category": "CFG", "component": "RTE", "component_id": "FST", "action": "SET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022201107D", '/dev/ttyO1'))
+        cmd = {"category": "CFG", "component": "RTE", "component_id": "FST", "action": "GET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022301117D", '/dev/ttyO1'))
+
+    def test_enc_sens_command(self):
+        cmd = {"category": "CFG", "component": "ENC", "component_id": "SEN", "action": "SET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022801107D", '/dev/ttyO1'))
+        cmd = {"category": "CFG", "component": "ENC", "component_id": "SEN", "action": "GET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022901117D", '/dev/ttyO1'))
+
+    '''
+    def test_panel_status_command(self):
+        cmd = {"category": "STS", "component": "SYS", "component_id": "STS", "action": "GET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022201107D", '/dev/ttyO1'))
+
+    def test_panel_fw_version_command(self):
+        cmd = {"category": "CFG", "component": "RTE", "component_id": "FST", "action": "SET", "value": "1"}
+        micro_cmd = translate_cfg_cmd(cmd)
+        self.assertEquals(micro_cmd, ("7B022201107D", '/dev/ttyO1'))
+    '''
+
 
 
 if __name__ == '__main__':

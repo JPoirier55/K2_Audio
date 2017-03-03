@@ -43,6 +43,7 @@ def worker():
         item = GLOBAL_QUEUE.get()
         ser = serial.Serial(item[1], 115200)
         ser.write(str(item[0]) + "\r\n")
+        print 'serial incoming', ser.readline()
 
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):

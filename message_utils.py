@@ -178,7 +178,7 @@ def translate_led_array(command):
             for id in cid_array:
                 micro_cmd += '{0:0{1}X}'.format(int(id), 2)
 
-        micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+        micro_cmd += '0{0}{1:0{2}X}'.format(checksum, stop_char, 2)
         micro_cmd = finalize_cmd(micro_cmd)
         command_array[uart_port] = (micro_cmd)
 

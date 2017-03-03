@@ -72,5 +72,4 @@ def client(ip, port, message):
         sock.close()
 
 if __name__ == "__main__":
-    while 1:
-        client('0.0.0.0', 65001, "data")
+    client('0.0.0.0', 65000, "{\"category\": \"BTN\",\"component\": \"LED\",\"component_id\": \"150\",\"action\": \"=\", \"value\":\"1\"}")

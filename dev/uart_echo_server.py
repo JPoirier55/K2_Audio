@@ -12,8 +12,6 @@ date           programmer         modification
 """
 import serial
 import select
-from threading import Thread
-from tcp_client import MicroMessageHandler
 
 
 class SerialReceiveHandler:

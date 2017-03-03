@@ -36,9 +36,12 @@ class SerialReceiveHandler:
         self.timeout = timeout
         serial_listeners = self.setup_listeners()
 
-        '''Possible other functions for threading serial
+        '''
+        Possible other functions for threading serial
         connections instead of using Select:
-        self.setup_threads(serial_listeners)'''
+
+        self.setup_threads(serial_listeners)
+        '''
 
         self.listen_serial(serial_listeners)
 
