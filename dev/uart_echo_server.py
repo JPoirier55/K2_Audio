@@ -64,7 +64,7 @@ class SerialReceiveHandler:
             for serial_connection in readable:
                 try:
                     incoming_message = serial_connection.readline()
-                    print incoming_message
+                    print 'incomgin message = :', incoming_message, '   from: ', serial_connection.port
                     serial_connection.write(incoming_message)
 
                 except serial.SerialException as e:

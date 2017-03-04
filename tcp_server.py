@@ -20,6 +20,7 @@ import json
 from message_utils import MessageHandler, error_response
 import argparse
 import threading
+from threading import Thread
 import SocketServer
 import serial
 import select
@@ -28,6 +29,7 @@ import socket
 import binascii
 
 DEBUG = True
+DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 SERVER_QUEUE = Queue.Queue()
 CLIENT_QUEUE = Queue.Queue()
@@ -35,6 +37,7 @@ MIDDLE_QUEUE = Queue.Queue()
 
 TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 TCP_CLIENT.connect(("192.168.255.88", 65000))
+
 
 def server_worker():
     """
@@ -61,10 +64,47 @@ def client_worker():
     while True:
         item = CLIENT_QUEUE.get()
         ref = MIDDLE_QUEUE.get()
+
+        print 'socket = ' , ref['request']
         if(item == ref['uart_defs']):
             ref['request'].sendall(item)
         else:
             TCP_CLIENT.sendall("Thtat did not work!")
+
+
+class SerialSendHandler:
+    def __init__(self, port, baudrate=115200, timeout=None):
+        """
+        Init baudrate and timeout for serial
+        @param baudrate: baudrate, default 115200
+        @param timeout: timeout, default None
+        """
+        self.baudrate = baudrate
+        self.timeout = timeout
+        self.port = port
+        self.ser = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=self.timeout)
+
+    def read_uart(self):
+        line = self.ser.readline()
+        return line
+
+
+    def send_uart(self, command):
+        """
+        Connect to serial connection and send command.
+        Then close serial connection
+        @param json_command: Command to be sent to uart
+        @param uart_send: port to write command to
+        @return: None
+        """
+        print 'sending: ', command, " ", self.port
+
+        self.ser.write(command + '\r\n')
+
+    def close(self):
+        self.ser.close()
+
+
 
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
@@ -91,8 +131,23 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                 self.request.sendall(json.dumps(response) + '\n')
                 return
             elif uart_port == "ALL":
-                for uart_port in UART_PORTS:
-                    SERVER_QUEUE.put((uart_command, uart_port))
+                for uart_port in DEV_UART_PORTS:
+                    while True:
+                        if not locks[uart_port]:
+                            locks[uart_port] = True
+                            ser = SerialSendHandler(uart_port)
+                            ser.send_uart('testing serial command {0}'.format(uart_port))
+                            print 'sending somestuff'
+                            response = ser.read_uart()
+                            ser.close()
+                            locks[uart_port] = False
+                            print 'response: ', response
+                            # convert response to json for dsp
+                            self.request.sendall(response)
+                            break
+
+
+
             elif uart_port == "ARRAY":
                 for uart_port, single_uart_command in uart_command.iteritems():
                     if len(single_uart_command) > 0:
@@ -182,6 +237,33 @@ class SerialReceiveHandler:
                         continue
 
 
+class ClientThread(Thread):
+    def __init__(self, ip, port, conn):
+        Thread.__init__(self)
+        self.ip = ip
+        self.port = port
+        self.conn = conn
+        print "[+] New server socket thread started for " + ip + ":" + str(port)
+
+    def run(self):
+        data = self.conn.recv(2048)
+        # convert data to micro cmd
+        SERVER_QUEUE.put({'request': self.conn, 'uart_defs': 'testing\r\n'})
+        item = MIDDLE_QUEUE.get()
+
+
+def server_tcp_worker(clientsock, addr):
+    while 1:
+        data = clientsock.recv(1024)
+        print 'data:' + repr(data)
+
+
+
+        if not data: break
+        clientsock.send("testing1234")
+        print 'sent:' + "testing"
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Provide port and host for TCP server')
     parser.add_argument('--h', '--HOST', default='0.0.0.0', help='Host ipv4 address (default 0.0.0.0)')
@@ -189,6 +271,25 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     HOST, PORT = args.h, args.p
+
+    # tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # tcp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # tcp_server.bind((HOST, int(PORT)))
+
+    locks = {'/dev/ttyO1': False,
+             '/dev/ttyO2': False,
+             '/dev/ttyO4': False,
+             '/dev/ttyO5': False}
+
+
+    # tcp_server.listen(5)
+    # while 1:
+    #     print 'waiting for connection...'
+    #     clientsock, addr = tcp_server.accept()
+    #     print '...connected from:', addr
+    #     server_tcp_worker = threading.Thread(target=server_tcp_worker, args=(clientsock, addr))
+    #     server_tcp_worker.daemon = True
+    #     server_tcp_worker.start()
     server = ThreadedTCPServer((HOST, int(PORT)), ThreadedTCPRequestHandler)
     ip, port = server.server_address
     print ip, port
@@ -196,25 +297,30 @@ if __name__ == "__main__":
     # Start a thread with the server -- that thread will then start one
     # more thread for each request
     server_thread = threading.Thread(target=server.serve_forever)
-    server_queue_thread = threading.Thread(target=server_worker)
-    client_queue_thread = threading.Thread(target=client_worker)
-    serial_thread = threading.Thread(target=SerialReceiveHandler)
-    # Exit the server thread when the main thread terminates
+    # server_tcp_worker = threading.Thread(target=server_tcp_worker)
+    # server_queue_thread = threading.Thread(target=server_worker)
+    # client_queue_thread = threading.Thread(target=client_worker)
+    # serial_thread = threading.Thread(target=SerialReceiveHandler)
+    # # Exit the server thread when the main thread terminates
     server_thread.daemon = True
     server_thread.start()
-    server_queue_thread.daemon = True
-    server_queue_thread.start()
-    client_queue_thread.daemon = True
-    client_queue_thread.start()
-    serial_thread.daemon = True
-    serial_thread.start()
-
-
-    if DEBUG:
-        print "Server loop running in thread:", server_thread.name
-        print 'Global server Queue running in thread: ', server_queue_thread.name
-        print 'Global client Queue running in thread: ', client_queue_thread.name
-        print 'Global serial handler running in thread: ', serial_thread.name
+    # server_tcp_worker.daemon = True
+    # server_tcp_worker.start()
+    # server_queue_thread.daemon = True
+    # server_queue_thread.start()
+    # client_queue_thread.daemon = True
+    # client_queue_thread.start()
+    # serial_thread.daemon = True
+    # serial_thread.start()
+    #
+    #
+    # if DEBUG:
+    #     # print "Server loop running in thread:", server_thread.name
+    #     print 'Global server Queue running in thread: ', server_queue_thread.name
+    #     print 'Global client Queue running in thread: ', client_queue_thread.name
+    #     print 'Global serial handler running in thread: ', serial_thread.name
+    #
+    #
 
 
     server.serve_forever()
