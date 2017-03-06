@@ -197,7 +197,7 @@ def translate_all_led(command):
     checksum = '0'
     command_byte = command_dict['set_led_button']
 
-    micro_cmd = "{0:0{6}X}{1:0>2}{2:0{6}X}{3:0{6}X}{4:0>2}{5:0{6}X}".format(start_char, length, command_byte,
+    micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0{6}X}{4}{5:0{6}X}".format(start_char, length, command_byte,
                                                                          parameters, checksum, stop_char, 2)
     micro_cmd = finalize_cmd(micro_cmd)
 
@@ -303,6 +303,21 @@ def translate_single_led(command):
     micro_cmd = micro_cmd[:len(micro_cmd) - 3] + "{0:0{1}X}".format(checksum, 2) + micro_cmd[len(micro_cmd) - 2:]
 
     return micro_cmd, uart_port
+
+
+def verify_micro_response(micro_response, micro_cmd):
+    micro_response = bytearray(micro_response)
+    micro_cmd = bytearray(micro_cmd)
+
+    micro_response = micro_response[:-2]
+    cs = 0
+    for i in micro_response:
+        cs += bin(i).count("1")
+    cs -= bin(micro_response[-2]).count("1")
+
+    if micro_response[2] == micro_cmd[2]:
+        if(cs == micro_response[-2]):
+            return True
 
 
 if __name__ == "__main__":
