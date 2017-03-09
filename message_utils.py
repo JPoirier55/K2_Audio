@@ -178,7 +178,7 @@ def translate_led_array(command):
             for id in cid_array:
                 micro_cmd += '{0:0{1}X}'.format(int(id), 2)
 
-        micro_cmd += '0{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+        micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
         micro_cmd = finalize_cmd(micro_cmd)
         command_array[uart_port] = (micro_cmd)
 
@@ -197,7 +197,7 @@ def translate_all_led(command):
     checksum = '0'
     command_byte = command_dict['set_led_button']
 
-    micro_cmd = "{0:0{6}X}{1:0>2}{2:0{6}X}{3:0{6}X}{4:0>2}{5:0{6}X}".format(start_char, length, command_byte,
+    micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0{6}X}{4}{5:0{6}X}".format(start_char, length, command_byte,
                                                                          parameters, checksum, stop_char, 2)
     micro_cmd = finalize_cmd(micro_cmd)
 
@@ -305,6 +305,21 @@ def translate_single_led(command):
     return micro_cmd, uart_port
 
 
+def verify_micro_response(micro_response, micro_cmd):
+    micro_response = bytearray(micro_response)
+    micro_cmd = bytearray(micro_cmd)
+
+    micro_response = micro_response[:-2]
+    cs = 0
+    for i in micro_response:
+        cs += bin(i).count("1")
+    cs -= bin(micro_response[-2]).count("1")
+
+    if micro_response[2] == micro_cmd[2]:
+        if(cs == micro_response[-2]):
+            return True
+
+
 if __name__ == "__main__":
     t = {"category": "BTN","component": "LED","component_id":
         ["34", "35", "123", "203","78","56","25","201","106"],
@@ -318,6 +333,7 @@ if __name__ == "__main__":
 
     print translate_cfg_cmd(t2)
     print translate_all_led("")
+
 
 class MessageHandler:
 
@@ -400,6 +416,7 @@ class MessageHandler:
         split and allocate all incoming panel_ids into <16
         len arrays
         @return:
+
         """
         command = deepcopy(self.json_request)
         response = deepcopy(self.json_request)

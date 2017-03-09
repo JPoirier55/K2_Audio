@@ -19,9 +19,6 @@ date           programmer         modification
 """
 import serial
 import select
-from threading import Thread
-from tcp_client import MicroMessageHandler
-
 
 class SerialReceiveHandler:
 
@@ -75,8 +72,12 @@ class SerialReceiveHandler:
             for serial_connection in readable:
                 #if serial_connection.inWaiting() > 0:
                     try:
+
                         incoming_message = serial_connection.readline()
                         print "Incoming uart message: [{0}] ".format(serial_connection.port), incoming_message
+                        print CLIENT_QUEUE
+                        CLIENT_QUEUE.put(incoming_message)
+
 
                         #msg_handler = MicroMessageHandler(incoming_message)
                         #msg_handler.handle_message()
