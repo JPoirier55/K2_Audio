@@ -14,6 +14,7 @@ import serial
 import select
 import time
 
+DEBUG = True
 
 class SerialReceiveHandler:
 
@@ -60,13 +61,25 @@ class SerialReceiveHandler:
         @param sers: array of serial handlers
         @return: None
         """
+
         while 1:
             readable, writable, exceptional = select.select(sers, [], sers)
             for serial_connection in readable:
                 try:
-                    incoming_message = serial_connection.readline()
-                    print 'incoming message: ', incoming_message, serial_connection.port
-                    serial_connection.write(incoming_message)
+                    str = ""
+                    while True:
+                        var = serial_connection.read(1)
+                        if DEBUG:
+                            print ord(var)
+
+                        if ord(var) == 0xee:
+                            str += var
+                            if DEBUG:
+                                print ":".join("{:02x}".format(ord(c)) for c in str)
+                            serial_connection.write(str)
+                            break
+                        else:
+                            str += var
 
                 except serial.SerialException as e:
                     print 'Cannot read line, Serial Exception Thrown:  ', e
