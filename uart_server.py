@@ -30,7 +30,7 @@ class SerialReceiveHandler:
         @param baudrate: baudrate, default 115200
         @param timeout: serial timeout, default None
         """
-        self.uarts = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+        self.uarts = ['/dev/ttyO5']
         self.timeout = timeout
         serial_listeners = self.setup_listeners()
 

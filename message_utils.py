@@ -124,11 +124,12 @@ def calculate_length(micro_cmd):
 
 
 def calculate_checksum_string(micro_cmd):
+    # TODO: Fix checksum to correspond with mikes protocol if overflow
     sum = 0
     ba =  bytearray.fromhex(str(micro_cmd[:-3]))
-    for i in range(len(ba[:-2])):
+    for i in range(len(ba[:-1])):
         sum += ba[i]
-    return sum
+    return sum%0x100
 
 
 def calculate_checksum_bytes(micro_cmd):
@@ -252,10 +253,14 @@ def translate_cfg_cmd(dsp_command):
         command_byte = command_dict['get_enc_sens']
     else:
         return None
-
-    micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0>2}{4}{5:0{6}X}".format(start_char, length, command_byte,
+    if action == 'GET':
+        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte,
+                                                                      checksum, stop_char, 2)
+    else:
+        micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0>2}{4}{5:0{6}X}".format(start_char, length, command_byte,
                                                                           parameters, checksum, stop_char, 2)
     micro_cmd = finalize_cmd(micro_cmd)
+    print 'MICRO CMD: ', micro_cmd
     return micro_cmd, UART_PORTS[0]
 
 
@@ -279,10 +284,17 @@ def translate_enc_cmd(command):
         command_byte = command_dict['set_enc_disp']
     elif comp == 'DIS' and action == 'GET':
         command_byte = command_dict['get_enc_disp']
+    elif comp == 'POS' and action == 'SET':
+        command_byte = command_dict['set_enc_pos']
+    elif comp == 'POS' and action == 'GET':
+        command_byte = command_dict['get_enc_pos']
     else:
         return None
-
-    micro_cmd = "{0:0{6}X}{1:0>2}{2:0{6}X}{3:0>2}{4:0>2}{5:0{6}X}".format(start_char, length, command_byte,
+    if action == 'GET':
+        micro_cmd = "{0:0{5}X}{1:0>2}{2:0{5}X}00{3:0>2}{4:0{5}X}".format(start_char, length, command_byte,
+                                                                              checksum, stop_char, 2)
+    else:
+        micro_cmd = "{0:0{6}X}{1:0>2}{2:0{6}X}{3:0>2}{4:0>2}{5:0{6}X}".format(start_char, length, command_byte,
                                                                     parameters, checksum, stop_char, 2)
 
     micro_cmd = finalize_cmd(micro_cmd)
@@ -399,11 +411,10 @@ class MessageHandler:
         include firmware and status.
         @return: FW or status response
         """
-        uart_port = UART_PORTS[0]
         micro_cmd = translate_cfg_cmd(self.json_request)
         response = self.json_request
         response['action'] = "="
-        return response, (micro_cmd, uart_port)
+        return response, micro_cmd
 
     def run_encoder_cmd(self):
         """
@@ -412,11 +423,10 @@ class MessageHandler:
         as the position of the encoder
         @return: Encoder response to DSP
         """
-        uart_port = UART_PORTS[0]
         micro_cmd = translate_enc_cmd(self.json_request)
         response = self.json_request
         response['action'] = "="
-        return response, (micro_cmd, uart_port)
+        return response, micro_cmd
 
     def run_status_cmd(self):
         # TODO: Update status utils to send msg to micros

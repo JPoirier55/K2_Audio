@@ -96,17 +96,20 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
         @param uart_port: port command comes on
         @return:
         """
-        ack = False
+        ack = True
         while True:
             if LOCKS[uart_port].acquire():
                 try:
                     ser = SerialSendHandler(uart_port)
                     ser.flush_input()
+                    print uart_command
                     command = bytearray.fromhex(uart_command)
-                    ser.send_uart(command)
-                    micro_response = ser.read_uart()
-                    if micro_response == MICRO_ACK:
-                        ack = True
+                    print command
+                    # ser.send_uart(command)
+                    # micro_response = ser.read_uart()
+                    # TODO: integrate with micro to get ack back for each command
+                    # if micro_response == MICRO_ACK:
+                    #     ack = True
                     ser.close()
                 finally:
                     LOCKS[uart_port].release()
@@ -132,6 +135,9 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
         if all(key in json_data for key in ("action", "category", "component", "component_id", "value")):
             msg = MessageHandler(json_data)
             response, (uart_command, uart_port) = msg.process_command()
+            print 'response:', response
+            print 'uart com :', uart_command
+            print 'uart port: ', uart_port
 
             if not uart_port or not uart_command:
                 self.request.sendall(json.dumps(response) + '\n')
@@ -143,6 +149,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                     while True:
                         if(self.serial_handle(uart_command, uart_port)):
                             ack_num += 1
+                        break
                 if ack_num == 4:
                     self.request.sendall(json.dumps(response))
 
