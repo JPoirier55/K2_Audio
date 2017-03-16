@@ -19,6 +19,7 @@ date           programmer         modification
 """
 import serial
 import select
+from message_utils import handle_unsolicited
 
 class SerialReceiveHandler:
 
@@ -72,15 +73,19 @@ class SerialReceiveHandler:
             for serial_connection in readable:
                 #if serial_connection.inWaiting() > 0:
                     try:
+                        incoming_command = ""
+                        while True:
+                            var = serial_connection.read(1)
+                            print ord(var)
 
-                        incoming_message = serial_connection.readline()
-                        print "Incoming uart message: [{0}] ".format(serial_connection.port), incoming_message
-                        print CLIENT_QUEUE
-                        CLIENT_QUEUE.put(incoming_message)
+                            if ord(var) == 0xee:
+                                incoming_command += var
+                                print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+                                break
+                            else:
+                                incoming_command += var
 
-
-                        #msg_handler = MicroMessageHandler(incoming_message)
-                        #msg_handler.handle_message()
+                        handle_unsolicited(incoming_command)
 
                     except serial.SerialException as e:
                         print 'Cannot read line, Serial Exception Thrown:  ', e
