@@ -127,14 +127,26 @@ def calculate_length(micro_cmd):
     return len(micro_cmd[4:len(micro_cmd)-4])
 
 
-def calculate_checksum(micro_cmd):
-    return bin(int(micro_cmd, 16))[2:].count("1")
+def calculate_checksum_string(micro_cmd):
+    sum = 0
+    ba =  bytearray.fromhex(str(micro_cmd[:-3]))
+    for i in range(len(ba[:-2])):
+        print ba[i]
+        sum += ba[i]
+    return sum
+
+
+def calculate_checksum_bytes(micro_cmd):
+    sum = 0
+    for i in range(len(micro_cmd)-2):
+        sum += ord(micro_cmd[i])
+    return sum
 
 
 def finalize_cmd(micro_cmd):
     length = calculate_length(micro_cmd)
     micro_cmd = micro_cmd[:2] + "{0:0{1}X}".format(length, 2) + micro_cmd[3:]
-    checksum = calculate_checksum(micro_cmd)
+    checksum = calculate_checksum_string(micro_cmd)
     micro_cmd = micro_cmd[:len(micro_cmd) - 3] + "{0:0{1}X}".format(checksum, 2) + micro_cmd[len(micro_cmd) - 2:]
     return micro_cmd
 
@@ -213,6 +225,8 @@ def translate_cfg_cmd(dsp_command):
     @param command: DSP json command
     @return: new micro command
     """
+
+    # TODO: remove parameters when there is a GET command
     comp = dsp_command['component']
     cid = dsp_command['component_id']
     action = dsp_command['action']
@@ -297,42 +311,62 @@ def translate_single_led(command):
     micro_cmd = "{0:0{7}X}{1}{2:0{7}X}{3:0{7}X}{4:0{7}X}{5}{6:0{7}X}".format(start_char, length, command_byte,
                                                                     value, parameter, checksum, stop_char, 2)
 
-    length = calculate_length(micro_cmd)
-    micro_cmd = micro_cmd[:2] + "{0:0{1}X}".format(length, 2) + micro_cmd[3:]
-    checksum = calculate_checksum(micro_cmd)
-    micro_cmd = micro_cmd[:len(micro_cmd) - 3] + "{0:0{1}X}".format(checksum, 2) + micro_cmd[len(micro_cmd) - 2:]
+    finalize_cmd(micro_cmd)
 
     return micro_cmd, uart_port
 
 
-def verify_micro_response(micro_response, micro_cmd):
-    micro_response = bytearray(micro_response)
-    micro_cmd = bytearray(micro_cmd)
-
-    micro_response = micro_response[:-2]
-    cs = 0
-    for i in micro_response:
-        cs += bin(i).count("1")
-    cs -= bin(micro_response[-2]).count("1")
-
-    if micro_response[2] == micro_cmd[2]:
-        if(cs == micro_response[-2]):
-            return True
-
-
 if __name__ == "__main__":
-    t = {"category": "BTN","component": "LED","component_id":
-        ["34", "35", "123", "203","78","56","25","201","106"],
-         "action": "SET", "value":"1"}
-    print translate_led_array(t)
-    t1 = {"category": "ENC","component": "DIS","component_id":
-        "0", "action": "SET", "value":"1"}
-    print translate_enc_cmd(t1)
-    t2 = {"category": "CFG", "component": "RTE", "component_id":
-        "SLO", "action": "SET", "value": "1"}
+    # t = {"category": "BTN","component": "LED","component_id":
+    #     ["34", "35", "123", "203","78","56","25","201","106"],
+    #      "action": "SET", "value":"1"}
+    # print translate_led_array(t)
+    # t1 = {"category": "ENC","component": "DIS","component_id":
+    #     "0", "action": "SET", "value":"1"}
+    # print translate_enc_cmd(t1)
+    # t2 = {"category": "CFG", "component": "RTE", "component_id":
+    #     "SLO", "action": "SET", "value": "1"}
+    #
+    # print translate_cfg_cmd(t2)
+    # print translate_all_led("")
+    t1 = 'e803100101fdee'
+    t = '7B04050010307D'
+    print calculate_checksum_string(t1)
 
-    print translate_cfg_cmd(t2)
-    print translate_all_led("")
+
+def handle_unsolicited(micro_command):
+
+    cmd = ord(micro_command[2])
+    checksum = ord(micro_command[-2])
+    cs = calculate_checksum_bytes(micro_command)
+
+    tcp_command = {}
+    if checksum == cs:
+        # TODO: check checksum - should we change it when it goes over 255???
+        if cmd == 0x10:
+            button_number = ord(micro_command[3])
+            value = ord(micro_command[4])
+            tcp_command = {'category': 'BTN',
+                           'component':'SW',
+                           'component_id': button_number,
+                           'action': '=',
+                           'value': value}
+        elif cmd == 0x11:
+            value = ord(micro_command[4])
+            tcp_command = {'category': 'ENC',
+                           'component': 'POS',
+                           'component_id': '0',
+                           'action': '=',
+                           'value': value}
+
+        elif cmd == 0x90:
+            value = ord(micro_command[3])
+            tcp_command = {'category': 'ERROR',
+                           'component': '',
+                           'component_id': '',
+                           'action': '=',
+                           'value': value}
+    return tcp_command
 
 
 class MessageHandler:
@@ -390,6 +424,7 @@ class MessageHandler:
         return response, (micro_cmd, uart_port)
 
     def run_status_cmd(self):
+        # TODO: Update status utils to send msg to micros
         """
         Run the status command on the system.
         Runs status_utils check_status method which
