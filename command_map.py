@@ -27,8 +27,8 @@ date           programmer         modification
 
 """
 
-start_char = 0x7b
-stop_char = 0x7d
+start_char = 0xe8
+stop_char = 0xee
 """
     Command messages fall within 4 ranges:
     0x20 0x2f = configuration commands
