@@ -21,13 +21,11 @@ from message_utils import MessageHandler, error_response, handle_unsolicited
 import argparse
 import threading
 from threading import Lock
-from threading import Thread
 import SocketServer
 import serial
 import select
 import Queue
 import socket
-import binascii
 
 DEBUG = True
 DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
@@ -89,6 +87,33 @@ class SerialSendHandler:
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
+    def serial_handle(self, uart_command, uart_port):
+        """
+        Generic method which handles the serial locking
+        and conversion to be sent, also checks the recv
+        ack from the micro to verify its correct
+        @param uart_command: command from micro
+        @param uart_port: port command comes on
+        @return:
+        """
+        ack = False
+        while True:
+            if LOCKS[uart_port].acquire():
+                try:
+                    ser = SerialSendHandler(uart_port)
+                    ser.flush_input()
+                    command = bytearray.fromhex(uart_command)
+                    ser.send_uart(command)
+                    micro_response = ser.read_uart()
+                    if micro_response == MICRO_ACK:
+                        ack = True
+                    ser.close()
+                finally:
+                    LOCKS[uart_port].release()
+                break
+        return ack
+
+
     def handle(self):
         """
         TCP Socket Server builtin function to handle
@@ -107,67 +132,34 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
         if all(key in json_data for key in ("action", "category", "component", "component_id", "value")):
             msg = MessageHandler(json_data)
             response, (uart_command, uart_port) = msg.process_command()
+
             if not uart_port or not uart_command:
                 self.request.sendall(json.dumps(response) + '\n')
                 return
+
             elif uart_port == "ALL":
-                ack_count = 0
+                ack_num = 0
                 for uart_port in UART_PORTS:
                     while True:
-                        if LOCKS[uart_port].acquire():
-                            try:
-                                ser = SerialSendHandler(uart_port)
-                                ser.flush_input()
-                                command = bytearray.fromhex(uart_command)
-                                ser.send_uart(command)
-                                micro_response = ser.read_uart()
-                                if micro_response == MICRO_ACK:
-                                    ack_count += 1
-                                ser.close()
-                            finally:
-                                LOCKS[uart_port].release()
-                            break
-                print ack_count
-                if ack_count == 4:
+                        if(self.serial_handle(uart_command, uart_port)):
+                            ack_num += 1
+                if ack_num == 4:
                     self.request.sendall(json.dumps(response))
 
             elif uart_port == "ARRAY":
-                ack_recv = False
+                ack_num = 0
+                count = 0
                 for uart_port, single_uart_command in uart_command.iteritems():
+                    count += 1
                     if len(single_uart_command) > 0:
                         single_command = json.dumps(single_uart_command).strip('"')
-                        while True:
-                            if LOCKS[uart_port].acquire():
-                                try:
-                                    ser = SerialSendHandler(uart_port)
-                                    command = bytearray.fromhex(single_command)
-                                    ser.send_uart(command)
-                                    micro_response = ser.read_uart()
-                                    if micro_response == MICRO_ACK:
-                                        ack_recv = True
-                                    ser.close()
-                                finally:
-                                    LOCKS[uart_port].release()
-                                break
-                if ack_recv:
+                        if self.serial_handle(single_command, uart_port):
+                            ack_num += 1
+                if ack_num == count:
                     self.request.sendall(json.dumps(response))
+
             else:
-                ack_recv = False
-                while True:
-                    if LOCKS[uart_port].acquire():
-                        try:
-                            ser = SerialSendHandler(uart_port)
-                            command = bytearray.fromhex(uart_command)
-                            ser.send_uart(command)
-                            micro_response = ser.read_uart()
-                            if micro_response == MICRO_ACK:
-                                ack_recv = True
-                            ser.close()
-                        finally:
-                            LOCKS[uart_port].release()
-                        self.request.sendall(micro_response)
-                        break
-                if ack_recv:
+                if self.serial_handle(uart_command, uart_port):
                     self.request.sendall(json.dumps(response))
         else:
             self.request.sendall(error_response(1)[0] + '\n')
@@ -234,27 +226,22 @@ class SerialReceiveHandler:
             for serial_connection in readable:
                 try:
                     incoming_command = ""
-                    print 'tryign to acquire'
                     if LOCKS[serial_connection.port].acquire():
                         try:
                             while True:
                                 var = serial_connection.read(1)
-                                print ord(var)
-
                                 if ord(var) == 0xee:
                                     incoming_command += var
-
-                                    print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+                                    if DEBUG:
+                                        print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
                                     break
                                 else:
                                     incoming_command += var
                                 serial_connection.write(BB_ACK)
                         finally:
-                            print ' released'
                             LOCKS[serial_connection.port].release()
 
                     msg = handle_unsolicited(incoming_command)
-                    print msg
                     self.TCP_CLIENT.sendall(json.dumps(msg))
 
                 except serial.SerialException as e:

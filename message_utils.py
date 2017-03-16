@@ -12,14 +12,10 @@ date           programmer         modification
 -----------------------------------------------
 1/25/17          JDP                original
 """
-import serial
-import json
 from copy import deepcopy
-import time
 import status_utils
 from button_led_map import map_arrays
 from command_map import *
-import binascii
 
 FIRMWARE_VERSION = "001"
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
@@ -131,7 +127,6 @@ def calculate_checksum_string(micro_cmd):
     sum = 0
     ba =  bytearray.fromhex(str(micro_cmd[:-3]))
     for i in range(len(ba[:-2])):
-        print ba[i]
         sum += ba[i]
     return sum
 
