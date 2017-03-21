@@ -19,7 +19,11 @@ date           programmer         modification
 """
 import serial
 import select
+import socket
 from message_utils import handle_unsolicited
+
+DSP_SERVER_IP = '192.168.255.88'
+DSP_SERVER_PORT = 65001
 
 class SerialReceiveHandler:
 
@@ -30,9 +34,11 @@ class SerialReceiveHandler:
         @param baudrate: baudrate, default 115200
         @param timeout: serial timeout, default None
         """
-        self.uarts = ['/dev/ttyO5']
+        self.uarts = ['/dev/ttyO1']
         self.timeout = timeout
         serial_listeners = self.setup_listeners()
+        # self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self.TCP_CLIENT.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
 
         '''
         Possible other functions for threading serial
@@ -85,7 +91,9 @@ class SerialReceiveHandler:
                             else:
                                 incoming_command += var
 
-                        handle_unsolicited(incoming_command)
+                        # msg = handle_unsolicited(incoming_command)
+                        serial_connection.write(incoming_command)
+                        # self.TCP_CLIENT.sendall(msg)
 
                     except serial.SerialException as e:
                         print 'Cannot read line, Serial Exception Thrown:  ', e

@@ -19,6 +19,9 @@ from command_map import *
 
 FIRMWARE_VERSION = "001"
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+ERROR_DESCS = ['Invalid category or component.',
+               'State (parameter) out of range',
+               'Command not understood/syntax invalid.']
 
 
 def error_response(error_id):
@@ -27,16 +30,12 @@ def error_response(error_id):
     @param error_id: ID of error
     @return: Error response in JSON format
     """
-    error_descs = ['Invalid category or component.',
-                   'State (parameter) out of range',
-                   'Command not understood/syntax invalid.']
-
     response = {'category': 'ERROR',
                 'component': '',
                 'component_id': '',
                 'action': '=',
                 'value': str(error_id),
-                'description': error_descs[error_id-1]}
+                'description': ERROR_DESCS[error_id-1]}
 
     return response, (None, None)
 
@@ -222,7 +221,6 @@ def translate_cfg_cmd(dsp_command):
     @return: new micro command
     """
 
-    # TODO: remove parameters when there is a GET command
     comp = dsp_command['component']
     cid = dsp_command['component_id']
     action = dsp_command['action']
@@ -346,35 +344,61 @@ def handle_unsolicited(micro_command):
     cmd = ord(micro_command[2])
     checksum = ord(micro_command[-2])
     cs = calculate_checksum_bytes(micro_command)
+    print cs
 
     tcp_command = {}
-    if checksum == cs:
+    # if checksum == cs:
         # TODO: check checksum - should we change it when it goes over 255???
-        if cmd == 0x10:
-            button_number = ord(micro_command[3])
-            value = ord(micro_command[4])
-            tcp_command = {'category': 'BTN',
-                           'component':'SW',
-                           'component_id': button_number,
-                           'action': '=',
-                           'value': value}
-        elif cmd == 0x11:
-            value = ord(micro_command[4])
-            tcp_command = {'category': 'ENC',
-                           'component': 'POS',
-                           'component_id': '0',
-                           'action': '=',
-                           'value': value}
+    if cmd == 0x10:
+        button_number = ord(micro_command[3])
+        value = ord(micro_command[4])
+        tcp_command = {'category': 'BTN',
+                       'component':'SW',
+                       'component_id': button_number,
+                       'action': '=',
+                       'value': value}
+    elif cmd == 0x11:
+        value = ord(micro_command[3])
+        tcp_command = {'category': 'ENC',
+                       'component': 'POS',
+                       'component_id': '0',
+                       'action': '=',
+                       'value': value}
 
-        elif cmd == 0x90:
-            value = ord(micro_command[3])
-            tcp_command = {'category': 'ERROR',
-                           'component': '',
-                           'component_id': '',
-                           'action': '=',
-                           'value': value}
+    elif cmd == 0xF0:
+        value = ord(micro_command[3])
+        tcp_command = {'category': 'ERROR',
+                       'component': '',
+                       'component_id': '',
+                       'action': '=',
+                       'value': value,
+                       'description': ERROR_DESCS[value]}
+
+    elif cmd == 0x90:
+        value = ord(micro_command[3])
+        tcp_command = {'category': 'EXCEPTION',
+                       'component': '',
+                       'component_id': '',
+                       'action': '=',
+                       'value': value}
+
+    elif cmd == 0x80:
+        tcp_command = {'category': 'ACK',
+                       'component': '',
+                       'component_id': '',
+                       'action': '=',
+                       'value': ''}
+
     return tcp_command
 
+
+def check_firmware():
+    length = '0'
+    checksum = '0'
+    command_byte = command_dict['get_fw_version']
+    micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte, checksum, stop_char, 2)
+    finalize_cmd(micro_cmd)
+    return micro_cmd, 'ALL'
 
 class MessageHandler:
 
@@ -440,8 +464,9 @@ class MessageHandler:
         response = self.json_request
         response['action'] = "="
         if self.json_request['component_id'] == "FW":
+            micro_cmd = check_firmware()
             response['value'] = self.fw_version
-            return response, ("FW", None)
+            return response, (micro_cmd, 'ALL')
         elif self.json_request['component_id'] == "STS":
             response['value'] = status_utils.check_status()
             return response, ("STS", None)
