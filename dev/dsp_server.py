@@ -28,51 +28,7 @@ def client():
     print 'Response:', resp
     TCP_CLIENT.close()
 
-    # TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # TCP_CLIENT.connect(('0.0.0.0', 65000))
-    # led_message = {"category": "CFG", "component": "RTE", "component_id": 'SLO', "action": "SET", "value": "1"}
-    # TCP_CLIENT.sendall(json.dumps(led_message))
-    # resp = TCP_CLIENT.recv(1024)
-    # print 'Response:', resp
-    # TCP_CLIENT.close()
-
-    for button_num in range(203):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "BTN", "component": "LED", "component_id": button_num, "action": "SET", "value": "1"}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "RTE", "component_id": 'SLO', "action": "SET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "RTE", "component_id": 'FST', "action": "SET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "CYC", "component_id": 'FST', "action": "SET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
+    for rate in range(2):
         TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         TCP_CLIENT.connect(('0.0.0.0', 65000))
         led_message = {"category": "CFG", "component": "CYC", "component_id": 'SLO', "action": "SET", "value": rate}
@@ -81,77 +37,132 @@ def client():
         print resp
         TCP_CLIENT.close()
 
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "ENC", "component_id": 'SEN', "action": "SET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
+    # TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # TCP_CLIENT.connect(('0.0.0.0', 65000))
+    # led_message = {"category": "CFG", "component": "RTE", "component_id": 'SLO', "action": "SET", "value": "1"}
+    # TCP_CLIENT.sendall(json.dumps(led_message))
+    # resp = TCP_CLIENT.recv(1024)
+    # print 'Response:', resp
+    # TCP_CLIENT.close()
 
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "RTE", "component_id": 'SLO', "action": "GET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "RTE", "component_id": 'FST', "action": "GET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "CYC", "component_id": 'FST', "action": "GET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "CYC", "component_id": 'SLO', "action": "GET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "CFG", "component": "ENC", "component_id": 'SEN', "action": "GET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "ENC", "component": "POS", "component_id": '0', "action": "SET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
-
-    for rate in range(10):
-        TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP_CLIENT.connect(('0.0.0.0', 65000))
-        led_message = {"category": "ENC", "component": "DIS", "component_id": '0', "action": "SET", "value": rate}
-        TCP_CLIENT.sendall(json.dumps(led_message))
-        resp = TCP_CLIENT.recv(1024)
-        print resp
-        TCP_CLIENT.close()
+    # for button_num in range(203):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "BTN", "component": "LED", "component_id": button_num, "action": "SET", "value": "1"}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "RTE", "component_id": 'SLO', "action": "SET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "RTE", "component_id": 'FST', "action": "SET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "CYC", "component_id": 'FST', "action": "SET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "CYC", "component_id": 'SLO', "action": "SET", "value": rate}
+    #     print ' this is hwere thers an issues'
+    #     print led_message
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "ENC", "component_id": 'SEN', "action": "SET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "RTE", "component_id": 'SLO', "action": "GET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "RTE", "component_id": 'FST', "action": "GET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "CYC", "component_id": 'FST', "action": "GET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "CYC", "component_id": 'SLO', "action": "GET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "CFG", "component": "ENC", "component_id": 'SEN', "action": "GET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "ENC", "component": "POS", "component_id": '0', "action": "SET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
+    #
+    # for rate in range(10):
+    #     TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     TCP_CLIENT.connect(('0.0.0.0', 65000))
+    #     led_message = {"category": "ENC", "component": "DIS", "component_id": '0', "action": "SET", "value": rate}
+    #     TCP_CLIENT.sendall(json.dumps(led_message))
+    #     resp = TCP_CLIENT.recv(1024)
+    #     print resp
+    #     TCP_CLIENT.close()
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
