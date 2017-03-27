@@ -21,15 +21,18 @@ from message_utils import MessageHandler, error_response, handle_unsolicited
 import argparse
 import threading
 from threading import Lock
-import SocketServer
 import serial
 import select
 import Queue
 import socket
+import time
+import sys
+
 
 DEBUG = True
 DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
-UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+xUART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+UART_PORTS = ['/dev/ttyO1', '/dev/ttyO1','/dev/ttyO1','/dev/ttyO1']
 SERVER_QUEUE = Queue.Queue()
 CLIENT_QUEUE = Queue.Queue()
 MIDDLE_QUEUE = Queue.Queue()
@@ -39,15 +42,18 @@ uart_lock2 = Lock()
 uart_lock4 = Lock()
 uart_lock5 = Lock()
 
-LOCKS = {'/dev/ttyO1': uart_lock1,
-         '/dev/ttyO2': uart_lock2,
-         '/dev/ttyO4': uart_lock4,
-         '/dev/ttyO5': uart_lock5}
+xLOCKS = {'/dev/ttyO1': uart_lock1,
+          '/dev/ttyO2': uart_lock2,
+          '/dev/ttyO4': uart_lock4,
+          '/dev/ttyO5': uart_lock5}
+
+LOCKS = {'/dev/ttyO4': uart_lock1
+         }
 
 MICRO_ACK = bytearray('E8018069EE')
 BB_ACK = bytearray('E8018069EE')
 DSP_SERVER_IP = '192.168.255.88'
-DSP_SERVER_PORT = 8003
+DSP_SERVER_PORT = 65000
 
 
 class SerialSendHandler:
@@ -85,91 +91,42 @@ class SerialSendHandler:
         self.ser.close()
 
 
-class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
-
-    def serial_handle(self, uart_command, uart_port):
-        """
-        Generic method which handles the serial locking
-        and conversion to be sent, also checks the recv
-        ack from the micro to verify its correct
-        @param uart_command: command from micro
-        @param uart_port: port command comes on
-        @return:
-        """
-        ack = False
-        while True:
-            if LOCKS[uart_port].acquire():
-                try:
-                    ser = SerialSendHandler(uart_port)
-                    ser.flush_input()
-                    command = bytearray.fromhex(uart_command)
-                    ser.send_uart(command)
-                    micro_response = ser.read_uart()
-                    if micro_response == MICRO_ACK:
-                        ack = True
-                    ser.close()
-                finally:
-                    LOCKS[uart_port].release()
-                break
-        return ack
-
-
-    def handle(self):
-        """
-        TCP Socket Server builtin function to handle
-        incoming packets. Inserts messages onto the
-        threaded global queue GLOBAL_QUEUE object along
-        with the uart port set by the incoming component_id
-        @return: None
-        """
-        self.data = self.request.recv(1024)
-
-        try:
-            json_data = json.loads(self.data)
-        except Exception as e:
-            return None
-
-        if all(key in json_data for key in ("action", "category", "component", "component_id", "value")):
-            msg = MessageHandler(json_data)
-            response, (uart_command, uart_port) = msg.process_command()
-
-            if not uart_port or not uart_command:
-                self.request.sendall(json.dumps(response) + '\n')
-                return
-
-            elif uart_port == "ALL":
-                ack_num = 0
-                for uart_port in UART_PORTS:
-                    while True:
-                        if(self.serial_handle(uart_command, uart_port)):
-                            ack_num += 1
-                if ack_num == 4:
-                    self.request.sendall(json.dumps(response))
-
-            elif uart_port == "ARRAY":
-                ack_num = 0
-                count = 0
-                for uart_port, single_uart_command in uart_command.iteritems():
-                    count += 1
-                    if len(single_uart_command) > 0:
-                        single_command = json.dumps(single_uart_command).strip('"')
-                        if self.serial_handle(single_command, uart_port):
-                            ack_num += 1
-                if ack_num == count:
-                    self.request.sendall(json.dumps(response))
-
-            else:
-                if self.serial_handle(uart_command, uart_port):
-                    self.request.sendall(json.dumps(response))
-        else:
-            self.request.sendall(error_response(1)[0] + '\n')
-
-
-class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+def serial_handle(uart_command, uart_port):
     """
-    Built in for Threaded SocketServer
+    Generic method which handles the serial locking
+    and conversion to be sent, also checks the recv
+    ack from the micro to verify its correct
+    @param uart_command: command from micro
+    @param uart_port: port command comes on
+    @return:
     """
-    pass
+    ack = False
+    while True:
+        if LOCKS[uart_port].acquire():
+            try:
+                # ser = SerialSendHandler(uart_port)
+                # ser.flush_input()
+                ser = serial.Serial('/dev/ttyO4', 115200)
+                command = bytearray.fromhex(uart_command)
+
+                if DEBUG:
+                    print command, uart_port
+
+                ser.write(command)
+                micro_response = ""
+                while True:
+                    var = ser.read(1)
+                    if ord(var) == 0xee:
+                        micro_response += var
+                        # print ":".join("{:02x}".format(ord(c)) for c in micro_response)
+                        break
+                    else:
+                        micro_response += var
+                ser.close()
+            finally:
+                LOCKS[uart_port].release()
+            break
+    return ack
 
 
 class SerialReceiveHandler:
@@ -181,18 +138,11 @@ class SerialReceiveHandler:
         @param baudrate: baudrate, default 115200
         @param timeout: serial timeout, default None
         """
-        self.uarts = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+        self.uarts = UART_PORTS
         self.timeout = timeout
         serial_listeners = self.setup_listeners()
         self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.TCP_CLIENT.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
-
-        '''
-        Possible other functions for threading serial
-        connections instead of using Select:
-
-        self.setup_threads(serial_listeners)
-        '''
 
         self.listen_serial(serial_listeners)
 
@@ -204,6 +154,7 @@ class SerialReceiveHandler:
         """
         sers = []
         for uart in self.uarts:
+            print uart
             try:
                 ser = serial.Serial(uart, baudrate=115200, timeout=self.timeout)
                 sers.append(ser)
@@ -227,13 +178,14 @@ class SerialReceiveHandler:
                 try:
                     incoming_command = ""
                     if LOCKS[serial_connection.port].acquire():
+                        # TODO: Check for RTS gpio to see if high
                         try:
                             while True:
                                 var = serial_connection.read(1)
                                 if ord(var) == 0xee:
                                     incoming_command += var
                                     if DEBUG:
-                                        print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+                                        print ":".join("{:02x}".format(ord(c)) for c in incoming_command), serial_connection.port
                                     break
                                 else:
                                     incoming_command += var
@@ -242,11 +194,136 @@ class SerialReceiveHandler:
                             LOCKS[serial_connection.port].release()
 
                     msg = handle_unsolicited(incoming_command)
-                    self.TCP_CLIENT.sendall(json.dumps(msg))
+                    print msg
+                    # self.TCP_CLIENT.sendall(json.dumps(msg))
 
                 except serial.SerialException as e:
                     print 'Cannot read line, Serial Exception Thrown:  ', e
                     continue
+
+
+class DataHandler:
+
+    def handle_all_msg(self, uart_command):
+        """
+        Handle messages that go to all uarts
+        @param uart_command: 
+        @return: 
+        """
+        ack_num = 0
+        for uart_port in UART_PORTS:
+            while True:
+                if (serial_handle(uart_command, uart_port)):
+                    ack_num += 1
+                break
+        if ack_num == 4:
+            print 'respond'
+        else:
+            print 'not all acks all'
+
+    def handle_arr_msg(self, uart_command):
+        """
+        Handle messages that come in as arrays
+        @param uart_command: 
+        @return: 
+        """
+        ack_num = 0
+
+        count = 0
+        for uart_port, single_uart_command in uart_command.iteritems():
+            count += 1
+            if len(single_uart_command) > 0:
+                single_command = json.dumps(single_uart_command).strip('"')
+                if serial_handle(single_command, uart_port):
+                    ack_num += 1
+        if ack_num == count:
+            print 'respond'
+        else:
+            print 'not all acks'
+
+    def handle_other_msg(self, uart_command, uart_port):
+        """
+        Handle all other messages such as single leds,
+        firmware or status messages
+        @param uart_command: 
+        @param uart_port: 
+        @return: 
+        """
+        if(serial_handle(uart_command, uart_port)):
+            print 'ack okay'
+        else:
+            print 'ack not okay'
+
+    def allocate(self, incoming_data):
+        try:
+            json_data = json.loads(incoming_data.replace(",}", "}"), encoding='utf8')
+        except Exception as e:
+            print 'NOT A VALID JSON'
+            return
+        response = ""
+        if all(key in json_data for key in
+               ("action", "category", "component", "component_id", "value")):
+            msg = MessageHandler(json_data)
+            response, (uart_command, uart_port) = msg.process_command()
+
+            if DEBUG:
+                print 'response:', response
+                print 'uart com :', uart_command
+                print 'uart port: ', uart_port
+
+            elif uart_port == "ALL":
+                self.handle_all_msg(uart_command)
+
+            elif uart_port == "ARRAY":
+                self.handle_arr_msg(uart_command)
+
+            else:
+                self.handle_other_msg(uart_command, uart_port)
+
+        print 'returning'
+
+
+def tcp_handler(sock):
+    """
+    Main loop for handling tcp connections
+    @param sock: 
+    @return: 
+    """
+    inputs = [sock]
+    data_handler = DataHandler()
+    while inputs:
+        readable, writable, exceptional = select.select(inputs, [], [sock], 5)
+        for r in readable:
+            if r is sock:
+                cnct, trt = sock.accept()
+                inputs.append(cnct)
+                while True:
+                    if DEBUG:
+                        print 'connected', trt
+                    incoming_data = cnct.recv(1024)
+
+                    if incoming_data:
+                        data_handler.allocate(incoming_data)
+                    else:
+                        break
+            else:
+                if DEBUG:
+                    print 'waiting for socket'
+                time.sleep(1)
+
+
+def serial_worker():
+    ser = serial.Serial('/dev/ttyO1', 115200)
+    incoming_command = ""
+    print 'setting up serial'
+    while True:
+        var = ser.read(1)
+        if ord(var) == 0xee:
+            incoming_command += var
+            print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+            ser.write(incoming_command)
+        else:
+            incoming_command += var
 
 
 if __name__ == "__main__":
@@ -257,20 +334,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
     HOST, PORT = args.h, args.p
 
-    server = ThreadedTCPServer((HOST, int(PORT)), ThreadedTCPRequestHandler)
-    ip, port = server.server_address
-    print ip, port
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    server_thread = threading.Thread(target=server.serve_forever)
-    serial_thread = threading.Thread(target=SerialReceiveHandler)
-
-    server_thread.daemon = True
-    server_thread.start()
+    serial_thread = threading.Thread(target=serial_worker)
     serial_thread.daemon = True
     serial_thread.start()
 
-    if DEBUG:
-        print "Server loop running in thread:", server_thread.name
-        print 'Global serial handler running in thread: ', serial_thread.name
+    # Bind the socket to the address given on the command line
+    server_address = (HOST, int(PORT))
+    print >> sys.stderr, 'starting up on %s port %s' % server_address
 
-    server.serve_forever()
+    sock.bind(server_address)
+    sock.setblocking(0)
+    sock.listen(1)
+    tcp_handler(sock)
+
