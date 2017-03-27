@@ -114,5 +114,15 @@ class SerialReceiveHandler:
 
 
 if __name__ == '__main__':
-    SerialReceiveHandler()
+    # SerialReceiveHandler()
+    ser = serial.Serial('/dev/ttyO1', 115200)
+    incoming_command = ""
+    while True:
+        var = ser.read(1)
+        if ord(var) == 0xee:
+            incoming_command += var
+            print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+            ser.write(incoming_command)
+        else:
+            incoming_command += var
 

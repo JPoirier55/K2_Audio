@@ -17,7 +17,6 @@ import status_utils
 from button_led_map import map_arrays
 from command_map import *
 
-FIRMWARE_VERSION = "001"
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 ERROR_DESCS = ['Invalid category or component.',
                'State (parameter) out of range',
@@ -119,14 +118,13 @@ def hex_tostring(hex_num):
 
 
 def calculate_length(micro_cmd):
-    return len(micro_cmd[4:len(micro_cmd)-4])
+    return len(micro_cmd[4:len(micro_cmd)-4])/2
 
 
 def calculate_checksum_string(micro_cmd):
-    # TODO: Fix checksum to correspond with mikes protocol if overflow
     sum = 0
     ba =  bytearray.fromhex(str(micro_cmd[:-3]))
-    for i in range(len(ba[:-1])):
+    for i in range(len(ba)):
         sum += ba[i]
     return sum%0x100
 
@@ -258,7 +256,7 @@ def translate_cfg_cmd(dsp_command):
         micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0>2}{4}{5:0{6}X}".format(start_char, length, command_byte,
                                                                           parameters, checksum, stop_char, 2)
     micro_cmd = finalize_cmd(micro_cmd)
-    print 'MICRO CMD: ', micro_cmd
+    # print 'MICRO CMD: ', micro_cmd
     return micro_cmd, UART_PORTS[0]
 
 
@@ -316,7 +314,7 @@ def translate_single_led(command):
     micro_cmd = "{0:0{7}X}{1}{2:0{7}X}{3:0{7}X}{4:0{7}X}{5}{6:0{7}X}".format(start_char, length, command_byte,
                                                                     value, parameter, checksum, stop_char, 2)
 
-    finalize_cmd(micro_cmd)
+    micro_cmd = finalize_cmd(micro_cmd)
 
     return micro_cmd, uart_port
 
@@ -344,7 +342,6 @@ def handle_unsolicited(micro_command):
     cmd = ord(micro_command[2])
     checksum = ord(micro_command[-2])
     cs = calculate_checksum_bytes(micro_command)
-    print cs
 
     tcp_command = {}
     # if checksum == cs:
@@ -392,19 +389,27 @@ def handle_unsolicited(micro_command):
     return tcp_command
 
 
-def check_firmware():
+def check_fw_or_status(request):
     length = '0'
     checksum = '0'
-    command_byte = command_dict['get_fw_version']
-    micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte, checksum, stop_char, 2)
+    micro_cmd = ''
+
+    if request == 'firmware':
+        command_byte = command_dict['get_fw_version']
+        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte, checksum, stop_char, 2)
+
+    if request == 'status':
+        command_byte = command_dict['get_panel_status']
+        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte, checksum, stop_char, 2)
+
     finalize_cmd(micro_cmd)
     return micro_cmd, 'ALL'
+
 
 class MessageHandler:
 
     def __init__(self, json_request):
         self.json_request = json_request
-        self.fw_version = FIRMWARE_VERSION
         self.category = self.json_request['category']
         self.component = self.json_request['component']
         self.component_id = self.json_request['component_id']
@@ -435,10 +440,10 @@ class MessageHandler:
         include firmware and status.
         @return: FW or status response
         """
-        micro_cmd = translate_cfg_cmd(self.json_request)
+        micro_command, uart_port = translate_cfg_cmd(self.json_request)
         response = self.json_request
         response['action'] = "="
-        return response, micro_cmd
+        return response, (micro_command, uart_port)
 
     def run_encoder_cmd(self):
         """
@@ -447,13 +452,12 @@ class MessageHandler:
         as the position of the encoder
         @return: Encoder response to DSP
         """
-        micro_cmd = translate_enc_cmd(self.json_request)
+        micro_command, uart_port = translate_enc_cmd(self.json_request)
         response = self.json_request
         response['action'] = "="
-        return response, micro_cmd
+        return response, (micro_command, uart_port)
 
     def run_status_cmd(self):
-        # TODO: Update status utils to send msg to micros
         """
         Run the status command on the system.
         Runs status_utils check_status method which
@@ -463,13 +467,17 @@ class MessageHandler:
         """
         response = self.json_request
         response['action'] = "="
+
         if self.json_request['component_id'] == "FW":
-            micro_cmd = check_firmware()
-            response['value'] = self.fw_version
-            return response, (micro_cmd, 'ALL')
+            micro_command, uart_port = check_fw_or_status('firmware')
+            response['action'] = '='
+            return response, (micro_command, uart_port)
+
         elif self.json_request['component_id'] == "STS":
-            response['value'] = status_utils.check_status()
-            return response, ("STS", None)
+            micro_command, uart_port = check_fw_or_status('status')
+            response['action'] = '='
+            return response, (micro_command, uart_port)
+
         else:
             return error_response(1)
 
