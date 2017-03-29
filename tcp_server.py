@@ -100,13 +100,24 @@ def serial_handle(uart_command, uart_port):
     @param uart_port: port command comes on
     @return:
     """
+    ser = serial.Serial('/dev/ttyO4', 115200)
+    command = bytearray.fromhex(uart_command)
+
+    if DEBUG:
+        print command, uart_port
+
+    ser.write(command)
+    ser.close()
+    return True
+
+    '''
     ack = False
     while True:
         if LOCKS[uart_port].acquire():
             try:
                 # ser = SerialSendHandler(uart_port)
                 # ser.flush_input()
-                ser = serial.Serial('/dev/ttyO4', 115200)
+                ser = serial.Serial('/dev/ttyO1', 115200)
                 command = bytearray.fromhex(uart_command)
 
                 if DEBUG:
@@ -119,6 +130,7 @@ def serial_handle(uart_command, uart_port):
                     if ord(var) == 0xee:
                         micro_response += var
                         # print ":".join("{:02x}".format(ord(c)) for c in micro_response)
+                        # TODO: check ack here
                         break
                     else:
                         micro_response += var
@@ -127,6 +139,7 @@ def serial_handle(uart_command, uart_port):
                 LOCKS[uart_port].release()
             break
     return ack
+    '''
 
 
 class SerialReceiveHandler:
@@ -237,7 +250,7 @@ class DataHandler:
                 if serial_handle(single_command, uart_port):
                     ack_num += 1
         if ack_num == count:
-            print 'respond'
+            print 'response'
         else:
             print 'not all acks'
 
@@ -249,12 +262,19 @@ class DataHandler:
         @param uart_port: 
         @return: 
         """
+
         if(serial_handle(uart_command, uart_port)):
             print 'ack okay'
         else:
             print 'ack not okay'
 
     def allocate(self, incoming_data):
+        """
+        Allocate incoming data to whatever micro command 
+        it is supposed to be 
+        @param incoming_data: 
+        @return: None
+        """
         try:
             json_data = json.loads(incoming_data.replace(",}", "}"), encoding='utf8')
         except Exception as e:
@@ -271,7 +291,7 @@ class DataHandler:
                 print 'uart com :', uart_command
                 print 'uart port: ', uart_port
 
-            elif uart_port == "ALL":
+            if uart_port == "ALL":
                 self.handle_all_msg(uart_command)
 
             elif uart_port == "ARRAY":
@@ -285,45 +305,92 @@ class DataHandler:
 
 def tcp_handler(sock):
     """
-    Main loop for handling tcp connections
+    Main tcp handler which cycles through 
+    readable file descriptors to check for 
+    any incoming tcp packets. Allows only 5 
+    readable connections, then drops the ones
+    that aren't used. There is a single socket
+    as the main file descriptor, followed by 
+    other connections, which get culled when
+    more than 5.
     @param sock: 
-    @return: 
+    @return: None
     """
     inputs = [sock]
+    outputs = []
+    message_queues = {}
     data_handler = DataHandler()
-    while inputs:
-        readable, writable, exceptional = select.select(inputs, [], [sock], 5)
-        for r in readable:
-            if r is sock:
-                cnct, trt = sock.accept()
-                inputs.append(cnct)
-                while True:
-                    if DEBUG:
-                        print 'connected', trt
-                    incoming_data = cnct.recv(1024)
+    try:
+        while inputs:
 
-                    if incoming_data:
-                        data_handler.allocate(incoming_data)
+            if len(inputs) > 5:
+                for t in range(1,len(inputs)-1):
+                    inputs[t].close()
+                inputs = [inputs[0], inputs[len(inputs)-1]]
+
+            readable, writable, exceptional = select.select(inputs, [], [sock], 1)
+            for s in readable:
+                if s is sock:
+                    connection, client_address = s.accept()
+                    if DEBUG:
+                        print 'Connect', client_address
+                    connection.setblocking(0)
+                    inputs.append(connection)
+
+                    message_queues[connection] = Queue.Queue()
+                else:
+                    data = s.recv(1024)
+                    if data:
+                        if DEBUG:
+                            print 'Data:', data
+                        # add to queue if response
+                        message_queues[s].put(data)
+                        data_handler.allocate(data)
+                        if s not in outputs:
+                            outputs.append(s)
                     else:
-                        break
-            else:
-                if DEBUG:
-                    print 'waiting for socket'
-                time.sleep(1)
+                        if DEBUG:
+                            print 'Closing:', s
+                        if s in outputs:
+                            outputs.remove(s)
+                        inputs.remove(s)
+                        s.close()
+                        # remove from queue
+                        del message_queues[s]
+
+    except Exception as e:
+        return
 
 
 def serial_worker():
+    """
+    Serial thread which listens for incoming
+    unsolicted messages
+    @return: 
+    """
+    # TODO: include readable, writable, exceptional in here
     ser = serial.Serial('/dev/ttyO1', 115200)
-    incoming_command = ""
     print 'setting up serial'
+
     while True:
-        var = ser.read(1)
-        if ord(var) == 0xee:
-            incoming_command += var
+        # TODO: check lock for uart here before proceeding
+        incoming_command = ""
+        start_char = ser.read(1)
+        incoming_command += start_char
+
+        if ord(start_char) == 0xe8:
+            length = ser.read(1)
+            incoming_command += length
+            for i in range(ord(length)):
+                cmd_byte = ser.read(1)
+                incoming_command += cmd_byte
+            checksum = ser.read(1)
+            incoming_command += checksum
+            stop_char = ser.read(1)
+            incoming_command += stop_char
             print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
             ser.write(incoming_command)
-        else:
-            incoming_command += var
+
 
 
 if __name__ == "__main__":
@@ -341,9 +408,8 @@ if __name__ == "__main__":
     serial_thread.daemon = True
     serial_thread.start()
 
-    # Bind the socket to the address given on the command line
     server_address = (HOST, int(PORT))
-    print >> sys.stderr, 'starting up on %s port %s' % server_address
+    print 'Starting server on:', server_address
 
     sock.bind(server_address)
     sock.setblocking(0)
