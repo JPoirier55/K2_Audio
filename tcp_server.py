@@ -73,7 +73,8 @@ xLOCKS = {'/dev/ttyO1': uart_lock1,
 LOCKS = {'/dev/ttyO1': uart_lock1
          }
 
-MICRO_ACK = bytearray('E8018069EE')
+MICRO_ACK = bytearray.fromhex('E8018069EE')
+MICRO_ERR = bytearray.fromhex('E8018069EE')
 BB_ACK = bytearray('E8018069EE')
 DSP_SERVER_IP = '192.168.255.88'
 DSP_SERVER_PORT = 65000
@@ -133,36 +134,36 @@ def serial_handle(uart_command, uart_port):
     ser.close()
     return True
 
-    '''
-    ack = False
-    while True:
-        if LOCKS[uart_port].acquire():
-            try:
-                # ser = SerialSendHandler(uart_port)
-                # ser.flush_input()
-                ser = serial.Serial('/dev/ttyO1', 115200)
-                command = bytearray.fromhex(uart_command)
 
-                if DEBUG:
-                    print command, uart_port
+    # ack = False
+    # while True:
+    #     if LOCKS[uart_port].acquire():
+    #         try:
+    #             # ser = SerialSendHandler(uart_port)
+    #             # ser.flush_input()
+    #             ser = serial.Serial('/dev/ttyO1', 115200)
+    #             command = bytearray.fromhex(uart_command)
+    #
+    #             if DEBUG:
+    #                 print command, uart_port
+    #
+    #             ser.write(command)
+    #             micro_response = ""
+    #             while True:
+    #                 var = ser.read(1)
+    #                 if ord(var) == 0xee:
+    #                     micro_response += var
+    #                     # print ":".join("{:02x}".format(ord(c)) for c in micro_response)
+    #                     # TODO: check ack here
+    #                     break
+    #                 else:
+    #                     micro_response += var
+    #             ser.close()
+    #         finally:
+    #             LOCKS[uart_port].release()
+    #         break
+    # return ack
 
-                ser.write(command)
-                micro_response = ""
-                while True:
-                    var = ser.read(1)
-                    if ord(var) == 0xee:
-                        micro_response += var
-                        # print ":".join("{:02x}".format(ord(c)) for c in micro_response)
-                        # TODO: check ack here
-                        break
-                    else:
-                        micro_response += var
-                ser.close()
-            finally:
-                LOCKS[uart_port].release()
-            break
-    return ack
-    '''
 
 
 class SerialReceiveHandler:
@@ -177,8 +178,7 @@ class SerialReceiveHandler:
         self.uarts = UART_PORTS
         self.timeout = timeout
         serial_listeners = self.setup_listeners()
-        self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.TCP_CLIENT.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
+
 
         self.listen_serial(serial_listeners)
 
@@ -411,6 +411,8 @@ class SerialHandler:
         self.gpio_fds = []
         self.sers = []
         self.setup()
+        self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.TCP_CLIENT.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
 
 
     def setup(self):
@@ -426,6 +428,14 @@ class SerialHandler:
         if DEBUG:
             print 'Breaking down Serial connections'
         # close
+
+    def send_tcp(self, unsol_msg):
+
+        tcp_message = handle_unsolicited(unsol_msg)
+        if DEBUG:
+            print 'TCP Message: ', tcp_message
+        self.TCP_CLIENT.send(json.dumps(tcp_message))
+
 
     def handle_message(self):
         print self.ser
@@ -449,8 +459,14 @@ class SerialHandler:
 
 
             c = calculate_checksum(ba)
+            if DEBUG:
+                print 'Checksum: ', c, ord(checksum)
             if c == ord(checksum):
-                self.ser.write(ba)
+                print 'tcp time'
+                if self.send_tcp(str(ba)):
+                    self.ser.write(MICRO_ACK)
+                else:
+                    self.ser.write(MICRO_ERR)
             else:
                 # TODO: catch this error and respond wtih error message
                 print 'bad checksum'

@@ -56,6 +56,11 @@ if __name__ == "__main__":
     #     if GPIO.event_detected("P8_41"):
     #         print "event detected!"
     ser = serial.Serial('/dev/ttyO4', 115200)
-    ba = bytearray.fromhex('E80E42078564523785634455667788942BEE')
+    # ba = bytearray.fromhex('E80E42078564523785634455667788942BEE')
+    ba = bytearray.fromhex('E80280006AEE')
     # print 'sum: ', calculate_checksum(ba)
     ser.write(ba)
+    #
+    while True:
+        t  = ser.read(1)
+        print hex(ord(t))

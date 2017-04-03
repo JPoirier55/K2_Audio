@@ -17,6 +17,7 @@ import status_utils
 from button_led_map import map_arrays
 from command_map import *
 
+DEBUG = True
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 ERROR_DESCS = ['Invalid category or component.',
                'State (parameter) out of range',
@@ -152,7 +153,7 @@ def calculate_checksum_bytes(micro_cmd):
     sum = 0
     for i in range(len(micro_cmd)-2):
         sum += ord(micro_cmd[i])
-    return sum
+    return sum%0x100
 
 
 def finalize_cmd(micro_cmd):
@@ -354,10 +355,16 @@ def handle_unsolicited(micro_command):
     @param micro_command: 
     @return: TCP command for dsp 
     """
+    for b in micro_command:
+        print ord(b)
+
+
     cmd = ord(micro_command[2])
     checksum = ord(micro_command[-2])
-    cs = calculate_checksum_bytes(micro_command)
+    print hex(checksum)
 
+    cs = calculate_checksum_bytes(micro_command)
+    print hex(cs)
     tcp_command = {}
     if checksum == cs:
         if cmd == 0x10:
