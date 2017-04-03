@@ -23,6 +23,14 @@ import select
 import socket
 from message_utils import handle_unsolicited
 
+def calculate_checksum(micro_cmd):
+    sum = 0
+    ba = bytearray(micro_cmd)
+
+    for i in range(len(ba[:-2])):
+        print ba[i]
+        sum += ba[i]
+    return sum % 0x100
 
 def serial_worker():
     """
@@ -47,11 +55,15 @@ def serial_worker():
                 cmd_byte = ser.read(1)
                 incoming_command += cmd_byte
             checksum = ser.read(1)
-            incoming_command += checksum
-            stop_char = ser.read(1)
-            incoming_command += stop_char
-            print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
-            ser.write(incoming_command)
+            print ord(checksum)
+            chk = calculate_checksum(incoming_command)
+            print chk
+            if chk == checksum:
+                incoming_command += checksum
+                stop_char = ser.read(1)
+                incoming_command += stop_char
+                print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+                ser.write(incoming_command)
 
 
 class SerialReceiveHandler:

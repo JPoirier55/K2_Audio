@@ -47,6 +47,7 @@ command_dict = {'set_led_slow_rate': 0x20,
                 'get_led_fast_dcyc': 0x27,
                 'set_enc_sens': 0x28,
                 'get_enc_sens': 0x29,
+                'set_led_brightness': 0x2a,
                 'get_panel_status': 0x31,
                 'get_fw_version': 0x33,
                 'set_led_button': 0x40,
@@ -97,3 +98,39 @@ status_and_exceptions = {'switch_action': 0x10,
                          'ack': 0x80,
                          'exception': 0x90,
                          'error': 0xf0}
+
+"""
+    Exception Codes
+    
+    Below are the possible exception codes reported with 
+    the Exception message.
+"""
+
+exception_codes = {'power_up_reset_occurred': 0x10,
+                   'other_reset_occurred': 0x11,
+                   'marginal_5v': 0x20,
+                   'high_low_5v': 0x21,
+                   'marginal_3.3v': 0x22,
+                   'high_low_3.3v': 0x23,
+                   'button_stuck_on': 0x30}
+
+"""
+    Error codes
+    
+    Below are the possible error codes reported with the Error message. 
+    Error codes below 0x80 are indicative of a properly formatted message 
+    with incorrect contents. Error codes above 0x80 are indicative of 
+    badly formatted messages, dropped characters, UART errors, etc. 
+
+"""
+error_codes = {'invalid_command': 0x11,
+               'incorrect_length': 0x12,
+               'invalid_parameter': 0x13,
+               'rx_misc_error': 0x81,
+               'bad_start_char': 0x82,
+               'invalid_length': 0x83,
+               'bad_checksum': 0x84,
+               'bad_stop_char': 0x85,
+               'rx_timeout': 0x86,
+               'rx_buffer_overflow': 0x87,
+               'rx_message_timeout': 0x88}
