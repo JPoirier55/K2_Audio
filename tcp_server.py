@@ -26,8 +26,31 @@ import select
 import Queue
 import socket
 import time
-import sys
 
+import Adafruit_BBIO.GPIO as GPIO
+
+# TODO: put all of these definitions in a seperate module
+GPIO.setup('P8_41', GPIO.IN)
+GPIO.setup('P8_42', GPIO.IN)
+GPIO.setup('P8_43', GPIO.IN)
+GPIO.setup('P8_44', GPIO.IN)
+
+GPIO.setup('P8_7', GPIO.OUT)
+GPIO.setup('P8_8', GPIO.OUT)
+GPIO.setup('P8_9', GPIO.OUT)
+GPIO.setup('P8_10', GPIO.OUT)
+
+GPIO.setup('USR0', GPIO.OUT)
+GPIO.setup('USR1', GPIO.OUT)
+GPIO.setup('USR2', GPIO.OUT)
+GPIO.setup('USR3', GPIO.OUT)
+
+RTS_GPIOS = ['/sys/class/gpio/gpio74/value', '/sys/class/gpio/gpio75/value',
+             '/sys/class/gpio/gpio72/value', '/sys/class/gpio/gpio73/value']
+GPIO_EDGE_FDS = ['/sys/class/gpio/gpio74/edge', '/sys/class/gpio/gpio75/edge',
+                 '/sys/class/gpio/gpio72/edge', '/sys/class/gpio/gpio73/edge']
+CTS_GPIOS = ['/sys/class/gpio/gpio66/value', '/sys/class/gpio/gpio67/value',
+             '/sys/class/gpio/gpio68/value', '/sys/class/gpio/gpio69/value']
 
 DEBUG = True
 DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
@@ -47,7 +70,7 @@ xLOCKS = {'/dev/ttyO1': uart_lock1,
           '/dev/ttyO4': uart_lock4,
           '/dev/ttyO5': uart_lock5}
 
-LOCKS = {'/dev/ttyO4': uart_lock1
+LOCKS = {'/dev/ttyO1': uart_lock1
          }
 
 MICRO_ACK = bytearray('E8018069EE')
@@ -230,9 +253,10 @@ class DataHandler:
                     ack_num += 1
                 break
         if ack_num == 4:
-            print 'respond'
+            return True
+
         else:
-            print 'not all acks all'
+            return False
 
     def handle_arr_msg(self, uart_command):
         """
@@ -250,9 +274,9 @@ class DataHandler:
                 if serial_handle(single_command, uart_port):
                     ack_num += 1
         if ack_num == count:
-            print 'response'
+            return True
         else:
-            print 'not all acks'
+            return False
 
     def handle_other_msg(self, uart_command, uart_port):
         """
@@ -264,9 +288,9 @@ class DataHandler:
         """
 
         if(serial_handle(uart_command, uart_port)):
-            print 'ack okay'
+            return True
         else:
-            print 'ack not okay'
+            return False
 
     def allocate(self, incoming_data):
         """
@@ -278,8 +302,7 @@ class DataHandler:
         try:
             json_data = json.loads(incoming_data.replace(",}", "}"), encoding='utf8')
         except Exception as e:
-            print 'NOT A VALID JSON'
-            return
+            return error_response(0)[0]
         response = ""
         if all(key in json_data for key in
                ("action", "category", "component", "component_id", "value")):
@@ -292,15 +315,21 @@ class DataHandler:
                 print 'uart port: ', uart_port
 
             if uart_port == "ALL":
-                self.handle_all_msg(uart_command)
+                if self.handle_all_msg(uart_command):
+                    return response
 
             elif uart_port == "ARRAY":
-                self.handle_arr_msg(uart_command)
+                if self.handle_arr_msg(uart_command):
+                    return response
 
             else:
-                self.handle_other_msg(uart_command, uart_port)
+                if self.handle_other_msg(uart_command, uart_port):
+                    return response
 
-        print 'returning'
+        else:
+            if DEBUG:
+                print 'Returning with failure'
+            return error_response(0)[0]
 
 
 def tcp_handler(sock):
@@ -345,7 +374,11 @@ def tcp_handler(sock):
                             print 'Data:', data
                         # add to queue if response
                         message_queues[s].put(data)
-                        data_handler.allocate(data)
+                        response = data_handler.allocate(data)
+                        if DEBUG:
+                            print 'return response to ', client_address, '  ', response
+                        s.sendall(json.dumps(response))
+
                         if s not in outputs:
                             outputs.append(s)
                     else:
@@ -359,38 +392,137 @@ def tcp_handler(sock):
                         del message_queues[s]
 
     except Exception as e:
+        print e
         return
 
 
-def serial_worker():
-    """
-    Serial thread which listens for incoming
-    unsolicted messages
-    @return: 
-    """
-    # TODO: include readable, writable, exceptional in here
-    ser = serial.Serial('/dev/ttyO1', 115200)
-    print 'setting up serial'
+def calculate_checksum(micro_cmd):
+    sum = 0
+    for i in range(len(micro_cmd) - 2):
+        sum += micro_cmd[i]
 
-    while True:
-        # TODO: check lock for uart here before proceeding
-        incoming_command = ""
-        start_char = ser.read(1)
-        incoming_command += start_char
+    return sum%0x100
 
-        if ord(start_char) == 0xe8:
-            length = ser.read(1)
-            incoming_command += length
-            for i in range(ord(length)):
-                cmd_byte = ser.read(1)
-                incoming_command += cmd_byte
-            checksum = ser.read(1)
-            incoming_command += checksum
-            stop_char = ser.read(1)
-            incoming_command += stop_char
-            print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
-            ser.write(incoming_command)
 
+class SerialHandler:
+    def __init__(self):
+        self.uart_ports = UART_PORTS
+        self.ser = None
+        self.gpio_fds = []
+        self.sers = []
+        self.setup()
+
+
+    def setup(self):
+        if DEBUG:
+            print 'Setting up Serial connections'
+        for uart in self.uart_ports:
+            new_ser = serial.Serial(uart, 115200)
+            self.sers.append(new_ser)
+
+
+    def break_down(self):
+        # TODO: close connections and files?
+        if DEBUG:
+            print 'Breaking down Serial connections'
+        # close
+
+    def handle_message(self):
+        print self.ser
+        try:
+            # TODO: use except to catch issues, return error message
+            ba = bytearray()
+            checksum = 0
+            start_char = self.ser.read(1)
+            ba.append(start_char)
+
+            if ord(start_char) == 0xe8:
+                length = self.ser.read(1)
+                ba.append(length)
+                for i in range(ord(length)):
+                    cmd_byte = self.ser.read(1)
+                    ba.append(cmd_byte)
+                checksum = self.ser.read(1)
+                ba.append(checksum)
+                stop_char = self.ser.read(1)
+                ba.append(stop_char)
+
+
+            c = calculate_checksum(ba)
+            if c == ord(checksum):
+                self.ser.write(ba)
+            else:
+                # TODO: catch this error and respond wtih error message
+                print 'bad checksum'
+        except Exception, e:
+            print e
+
+    def handle_locks(self, port_index):
+        try:
+            if LOCKS[self.uart_ports[port_index]].acquire():
+                if DEBUG:
+                    print 'Serial lock acquired'
+                self.ser = self.sers[port_index]
+                self.ser.flushInput()
+                GPIO.output("USR{0}".format(port_index), GPIO.HIGH)
+                self.handle_message()
+                LOCKS[self.uart_ports[port_index]].release()
+
+        finally:
+            GPIO.output("USR{0}".format(port_index), GPIO.LOW)
+            if DEBUG:
+                print 'Serial lock released'
+
+
+    def serial_worker(self):
+        """
+        Serial thread which listens for incoming
+        unsolicted messages
+        @return: 
+        """
+        vals = []
+        while True:
+
+            for gpio in RTS_GPIOS:
+                open_file = open(gpio)
+                self.gpio_fds.append(open_file)
+
+            for gpio_edge_fd in GPIO_EDGE_FDS:
+                fd = open(gpio_edge_fd, 'w')
+                fd.write("both")
+
+            for fd in self.gpio_fds:
+                vals.append(fd.read())
+
+
+            readable, writable, exceptional = select.select([], [], self.gpio_fds, 5)
+            for e in exceptional:
+                if e == self.gpio_fds[0]:
+                    if int(vals[0]) == 1:
+                        print 'gpio 0'
+                        print int(vals[0])
+                        self.handle_locks(0)
+
+                elif e == self.gpio_fds[1]:
+                    if int(vals[1]) == 1:
+                        print 'gpio 1'
+                        print int(vals[1])
+                        self.handle_locks(1)
+
+                elif e == self.gpio_fds[2]:
+                    if int(vals[2]) == 1:
+                        print 'gpio 2'
+                        print int(vals[2])
+                        self.handle_locks(2)
+
+                elif e == self.gpio_fds[3]:
+                    if int(vals[3]) ==1:
+                        print 'gpio 3'
+                        print int(vals[3])
+                        self.handle_locks(3)
+
+            vals = []
+            self.gpio_fds = []
 
 
 if __name__ == "__main__":
@@ -403,8 +535,9 @@ if __name__ == "__main__":
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    serial_handler = SerialHandler()
 
-    serial_thread = threading.Thread(target=serial_worker)
+    serial_thread = threading.Thread(target=serial_handler.serial_worker)
     serial_thread.daemon = True
     serial_thread.start()
 
@@ -414,5 +547,6 @@ if __name__ == "__main__":
     sock.bind(server_address)
     sock.setblocking(0)
     sock.listen(1)
+    # while True:
     tcp_handler(sock)
 
