@@ -23,6 +23,8 @@ import select
 import socket
 from message_utils import handle_unsolicited
 
+MICRO_ACK = 'E8018069EE'
+
 def calculate_checksum(micro_cmd):
     sum = 0
     ba = bytearray(micro_cmd)
@@ -39,7 +41,7 @@ def serial_worker():
     @return: 
     """
     # TODO: include readable, writable, exceptional in here
-    ser = serial.Serial('/dev/ttyO1', 115200)
+    ser = serial.Serial('/dev/ttyO4', 115200)
     print 'setting up serial'
 
     while True:
@@ -63,7 +65,7 @@ def serial_worker():
                 stop_char = ser.read(1)
                 incoming_command += stop_char
                 print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
-                ser.write(incoming_command)
+                ser.write(MICRO_ACK)
 
 
 class SerialReceiveHandler:
@@ -75,7 +77,7 @@ class SerialReceiveHandler:
         @param baudrate: baudrate, default 115200
         @param timeout: serial timeout, default None
         """
-        self.uarts = ['/dev/ttyO1']
+        self.uarts = ['/dev/ttyO4']
         self.timeout = timeout
         serial_listeners = self.setup_listeners()
         # self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -133,7 +135,7 @@ class SerialReceiveHandler:
                                 incoming_command += var
 
                         # msg = handle_unsolicited(incoming_command)
-                        serial_connection.write(incoming_command)
+                        serial_connection.write(bytearray.fromhex(MICRO_ACK))
                         # self.TCP_CLIENT.sendall(msg)
 
                     except serial.SerialException as e:
@@ -155,8 +157,8 @@ class SerialReceiveHandler:
 
 
 if __name__ == '__main__':
-    # SerialReceiveHandler()
-    serial_worker()
+    SerialReceiveHandler()
+    # serial_worker()
     # print ":".join("{:02x}".format(ord(c)) for c in serial_worker())
     # ser = serial.Serial('/dev/ttyO1', 115200)
     # incoming_command = ""

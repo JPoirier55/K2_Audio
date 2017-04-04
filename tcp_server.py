@@ -474,20 +474,22 @@ class SerialHandler:
             print e
 
     def handle_locks(self, port_index):
-        try:
+        while True:
             if LOCKS[self.uart_ports[port_index]].acquire():
-                if DEBUG:
-                    print 'Serial lock acquired'
-                self.ser = self.sers[port_index]
-                self.ser.flushInput()
-                GPIO.output("USR{0}".format(port_index), GPIO.HIGH)
-                self.handle_message()
-                LOCKS[self.uart_ports[port_index]].release()
+                try:
+                    if DEBUG:
+                        print 'Serial lock acquired'
+                    self.ser = self.sers[port_index]
+                    self.ser.flushInput()
+                    GPIO.output("USR{0}".format(port_index), GPIO.HIGH)
+                    self.handle_message()
 
-        finally:
-            GPIO.output("USR{0}".format(port_index), GPIO.LOW)
-            if DEBUG:
-                print 'Serial lock released'
+                finally:
+                    LOCKS[self.uart_ports[port_index]].release()
+                    GPIO.output("USR{0}".format(port_index), GPIO.LOW)
+                    if DEBUG:
+                        print 'Serial lock released'
+                    break
 
 
     def serial_worker(self):
