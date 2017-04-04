@@ -128,83 +128,103 @@ class TestButtonMapping(unittest.TestCase):
             client.close()
     '''
 
-    # def test_enc_command(self):
-    #     cmd = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SET", "value": "1"}
-    #     micro_cmd = translate_cfg_cmd(cmd)
-    #     self.assertEquals(micro_cmd, ("7B022401107D", '/dev/ttyO1'))
-
     def test_single_led_command(self):
         cmd = {"category": "BTN", "component": "LED", "component_id": "155", "action": "SET", "value": "1"}
         micro_cmd = translate_single_led(cmd)
-        self.assertEquals(micro_cmd, ("7B0440019B147D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E80340019BC7EE", '/dev/ttyO1'))
 
     def test_led_array_command(self):
-        test = "7B0742017B19001B7D"
-        t = bytearray.fromhex(test)
-        for i in t:
-            print bin(i)
-
         cmd = {"category": "BTN","component": "LED","component_id":
             ["34", "35", "123", "203","78","56","25","201","106"],"action": "SET", "value":"1"}
         micro_cmd = translate_led_array(cmd)
-        self.assertEquals(micro_cmd[0]['/dev/ttyO1'], "7B074201CBC901B7D")
-        self.assertEquals(micro_cmd[0]['/dev/ttyO2'], "7B0742014E6A01A7D")
-        self.assertEquals(micro_cmd[0]['/dev/ttyO4'], "7B0942012223380197D")
-        self.assertEquals(micro_cmd[0]['/dev/ttyO5'], "7B0742017B1901B7D")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO1'], "E8044201CBC9C3EE")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO2'], "E80442014E6AE7EE")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO4'], "E8054201222338ADEE")
+        self.assertEquals(micro_cmd[0]['/dev/ttyO5'], "E80442017B19C3EE")
 
     def test_slow_dcyc_command(self):
         cmd = {"category": "CFG", "component": "CYC", "component_id": "SLO", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022401107D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E80224010FEE", '/dev/ttyO1'))
         cmd = {"category": "CFG", "component": "CYC", "component_id": "SLO", "action": "GET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022501117D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E80225000FEE", '/dev/ttyO1'))
 
     def test_fast_dcyc_command(self):
         cmd = {"category": "CFG", "component": "CYC", "component_id": "FST", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022601117D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E802260111EE", '/dev/ttyO1'))
         cmd = {"category": "CFG", "component": "CYC", "component_id": "FST", "action": "GET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022701127D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E802270011EE", '/dev/ttyO1'))
 
     def test_slow_rate_command(self):
         cmd = {"category": "CFG", "component": "RTE", "component_id": "SLO", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B0220010F7D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E80220010BEE", '/dev/ttyO1'))
         cmd = {"category": "CFG", "component": "RTE", "component_id": "SLO", "action": "GET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022101107D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E80221000BEE", '/dev/ttyO1'))
 
     def test_fast_rate_command(self):
         cmd = {"category": "CFG", "component": "RTE", "component_id": "FST", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022201107D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E80222010DEE", '/dev/ttyO1'))
         cmd = {"category": "CFG", "component": "RTE", "component_id": "FST", "action": "GET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022301117D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E80223000DEE", '/dev/ttyO1'))
 
     def test_enc_sens_command(self):
         cmd = {"category": "CFG", "component": "ENC", "component_id": "SEN", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022801107D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E802280113EE", '/dev/ttyO1'))
         cmd = {"category": "CFG", "component": "ENC", "component_id": "SEN", "action": "GET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022901117D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E802290013EE", '/dev/ttyO1'))
 
     '''
     def test_panel_status_command(self):
         cmd = {"category": "STS", "component": "SYS", "component_id": "STS", "action": "GET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022201107D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E802220110EE", '/dev/ttyO1'))
 
     def test_panel_fw_version_command(self):
         cmd = {"category": "CFG", "component": "RTE", "component_id": "FST", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        self.assertEquals(micro_cmd, ("7B022201107D", '/dev/ttyO1'))
+        self.assertEquals(micro_cmd, ("E802220110EE", '/dev/ttyO1'))
     '''
 
+    def test_checksum(self):
+        cmd_chk = 'E80310050000EE'
+        cmd = 'E8031005000EE'
+        self.assertEquals(bytearray.fromhex(cmd_chk)[-2], calculate_checksum_string(cmd))
 
+        cmd2_chk = 'E80842010E0F1018191AABEE'
+        cmd2 = 'E80842010E0F1018191A0EE'
+        self.assertEquals(bytearray.fromhex(cmd2_chk)[-2], calculate_checksum_string(cmd2))
+
+        cmd3_chk = 'E81042010405060708090A11121314151617F8EE'
+        cmd3 = 'E81042010405060708090A111213141516170EE'
+        self.assertEquals(bytearray.fromhex(cmd3_chk)[-2], calculate_checksum_string(cmd3))
+
+        cmd4_chk = 'E80942010102030B0C0D1B79EE'
+        cmd4 = 'E80942010102030B0C0D1B0EE'
+        self.assertEquals(bytearray.fromhex(cmd4_chk)[-2], calculate_checksum_string(cmd4))
+
+        cmd5_chk = 'E80242012DEE'
+        cmd5 = 'E80242010EE'
+        self.assertEquals(bytearray.fromhex(cmd5_chk)[-2], calculate_checksum_string(cmd5))
+
+        cmd6_chk = 'E800E8EE'
+        cmd6 = 'E8000EE'
+        self.assertEquals(bytearray.fromhex(cmd6_chk)[-2], calculate_checksum_string(cmd6))
+
+        cmd7_chk = '000000'
+        cmd7 = '000'
+        self.assertEquals(bytearray.fromhex(cmd7_chk)[-2], calculate_checksum_string(cmd7))
+
+
+# TODO: Test for having checksum == E8 or EE!!
 
 if __name__ == '__main__':
     unittest.main()

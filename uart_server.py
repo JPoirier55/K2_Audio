@@ -19,11 +19,52 @@ date           programmer         modification
 """
 import serial
 import select
+# import Adafruit_GPIO as GPIO
 import socket
 from message_utils import handle_unsolicited
 
-DSP_SERVER_IP = '192.168.255.88'
-DSP_SERVER_PORT = 65001
+def calculate_checksum(micro_cmd):
+    sum = 0
+    ba = bytearray(micro_cmd)
+
+    for i in range(len(ba[:-2])):
+        print ba[i]
+        sum += ba[i]
+    return sum % 0x100
+
+def serial_worker():
+    """
+    Serial thread which listens for incoming
+    unsolicted messages
+    @return: 
+    """
+    # TODO: include readable, writable, exceptional in here
+    ser = serial.Serial('/dev/ttyO1', 115200)
+    print 'setting up serial'
+
+    while True:
+        # TODO: check lock for uart here before proceeding
+        incoming_command = ""
+        start_char = ser.read(1)
+        incoming_command += start_char
+
+        if ord(start_char) == 0xe8:
+            length = ser.read(1)
+            incoming_command += length
+            for i in range(ord(length)):
+                cmd_byte = ser.read(1)
+                incoming_command += cmd_byte
+            checksum = ser.read(1)
+            print ord(checksum)
+            chk = calculate_checksum(incoming_command)
+            print chk
+            if chk == checksum:
+                incoming_command += checksum
+                stop_char = ser.read(1)
+                incoming_command += stop_char
+                print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+                ser.write(incoming_command)
+
 
 class SerialReceiveHandler:
 
@@ -115,14 +156,16 @@ class SerialReceiveHandler:
 
 if __name__ == '__main__':
     # SerialReceiveHandler()
-    ser = serial.Serial('/dev/ttyO1', 115200)
-    incoming_command = ""
-    while True:
-        var = ser.read(1)
-        if ord(var) == 0xee:
-            incoming_command += var
-            print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
-            ser.write(incoming_command)
-        else:
-            incoming_command += var
+    serial_worker()
+    # print ":".join("{:02x}".format(ord(c)) for c in serial_worker())
+    # ser = serial.Serial('/dev/ttyO1', 115200)
+    # incoming_command = ""
+    # while True:
+    #     var = ser.read(1)
+    #     if ord(var) == 0xee:
+    #         incoming_command += var
+    #         print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+    #         ser.write(incoming_command)
+    #     else:
+    #         incoming_command += var
 

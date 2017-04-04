@@ -17,6 +17,7 @@ import status_utils
 from button_led_map import map_arrays
 from command_map import *
 
+DEBUG = True
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 ERROR_DESCS = ['Invalid category or component.',
                'State (parameter) out of range',
@@ -113,15 +114,26 @@ def array_to_string(array):
     return string
 
 
-def hex_tostring(hex_num):
-    return hex(hex_num)[2:]
-
-
 def calculate_length(micro_cmd):
-    return len(micro_cmd[4:len(micro_cmd)-4])/2
+    """
+    Calculates length of micro commmand
+    by look at size after length, up to 
+    checksum
+    @param micro_cmd: 
+    @return: length of command 
+    """
+    return len(micro_cmd[4:len(micro_cmd)-2])/2
 
 
 def calculate_checksum_string(micro_cmd):
+    """
+    Calculates checksum of an outgoing
+    micro command that is currently of
+    type string, uses only lease significant
+    byte for command
+    @param micro_cmd: 
+    @return: checksum
+    """
     sum = 0
     ba =  bytearray.fromhex(str(micro_cmd[:-3]))
     for i in range(len(ba)):
@@ -130,13 +142,29 @@ def calculate_checksum_string(micro_cmd):
 
 
 def calculate_checksum_bytes(micro_cmd):
+    """
+    Calculates checksum of incoming
+    micro command that is from an 
+    unsolicited command and is of the 
+    form byte array
+    @param micro_cmd: 
+    @return: checksum
+    """
     sum = 0
     for i in range(len(micro_cmd)-2):
         sum += ord(micro_cmd[i])
-    return sum
+    return sum%0x100
 
 
 def finalize_cmd(micro_cmd):
+    """
+    Takes command that is outgoing to 
+    micro and injects both checksum and
+    length in the final command to be 
+    sent out
+    @param micro_cmd: 
+    @return: final micro command 
+    """
     length = calculate_length(micro_cmd)
     micro_cmd = micro_cmd[:2] + "{0:0{1}X}".format(length, 2) + micro_cmd[3:]
     checksum = calculate_checksum_string(micro_cmd)
@@ -256,7 +284,7 @@ def translate_cfg_cmd(dsp_command):
         micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0>2}{4}{5:0{6}X}".format(start_char, length, command_byte,
                                                                           parameters, checksum, stop_char, 2)
     micro_cmd = finalize_cmd(micro_cmd)
-    # print 'MICRO CMD: ', micro_cmd
+
     return micro_cmd, UART_PORTS[0]
 
 
@@ -264,8 +292,7 @@ def translate_enc_cmd(command):
     """
     Translated incoming DSP json command to a
     more condensed version to be sent to the micro
-    as a possible set of bytes/ascii chars. Will be
-    updated for new protocol between bb and micros
+    as a possible set of bytes/ascii chars. 
     @param command: DSP json command
     @return: new micro command
     """
@@ -319,77 +346,78 @@ def translate_single_led(command):
     return micro_cmd, uart_port
 
 
-if __name__ == "__main__":
-    # t = {"category": "BTN","component": "LED","component_id":
-    #     ["34", "35", "123", "203","78","56","25","201","106"],
-    #      "action": "SET", "value":"1"}
-    # print translate_led_array(t)
-    # t1 = {"category": "ENC","component": "DIS","component_id":
-    #     "0", "action": "SET", "value":"1"}
-    # print translate_enc_cmd(t1)
-    # t2 = {"category": "CFG", "component": "RTE", "component_id":
-    #     "SLO", "action": "SET", "value": "1"}
-    #
-    # print translate_cfg_cmd(t2)
-    # print translate_all_led("")
-    t1 = 'e803100101fdee'
-    t = '7B04050010307D'
-    print calculate_checksum_string(t1)
-
-
 def handle_unsolicited(micro_command):
+    """
+    Handles incoming unsolicited commands
+    from the micro. First checks checksum
+    then builds a tcp command to be sent
+    to DSP
+    @param micro_command: 
+    @return: TCP command for dsp 
+    """
+    for b in micro_command:
+        print ord(b)
+
 
     cmd = ord(micro_command[2])
     checksum = ord(micro_command[-2])
+    print hex(checksum)
+
     cs = calculate_checksum_bytes(micro_command)
-
+    print hex(cs)
     tcp_command = {}
-    # if checksum == cs:
-        # TODO: check checksum - should we change it when it goes over 255???
-    if cmd == 0x10:
-        button_number = ord(micro_command[3])
-        value = ord(micro_command[4])
-        tcp_command = {'category': 'BTN',
-                       'component':'SW',
-                       'component_id': button_number,
-                       'action': '=',
-                       'value': value}
-    elif cmd == 0x11:
-        value = ord(micro_command[3])
-        tcp_command = {'category': 'ENC',
-                       'component': 'POS',
-                       'component_id': '0',
-                       'action': '=',
-                       'value': value}
+    if checksum == cs:
+        if cmd == 0x10:
+            button_number = ord(micro_command[3])
+            value = ord(micro_command[4])
+            tcp_command = {'category': 'BTN',
+                           'component':'SW',
+                           'component_id': button_number,
+                           'action': '=',
+                           'value': value}
+        elif cmd == 0x11:
+            value = ord(micro_command[3])
+            tcp_command = {'category': 'ENC',
+                           'component': 'POS',
+                           'component_id': '0',
+                           'action': '=',
+                           'value': value}
 
-    elif cmd == 0xF0:
-        value = ord(micro_command[3])
-        tcp_command = {'category': 'ERROR',
-                       'component': '',
-                       'component_id': '',
-                       'action': '=',
-                       'value': value,
-                       'description': ERROR_DESCS[value]}
+        elif cmd == 0xF0:
+            value = ord(micro_command[3])
+            tcp_command = {'category': 'ERROR',
+                           'component': '',
+                           'component_id': '',
+                           'action': '=',
+                           'value': value,
+                           'description': ERROR_DESCS[value]}
 
-    elif cmd == 0x90:
-        value = ord(micro_command[3])
-        tcp_command = {'category': 'EXCEPTION',
-                       'component': '',
-                       'component_id': '',
-                       'action': '=',
-                       'value': value}
+        elif cmd == 0x90:
+            value = ord(micro_command[3])
+            tcp_command = {'category': 'EXCEPTION',
+                           'component': '',
+                           'component_id': '',
+                           'action': '=',
+                           'value': value}
 
-    elif cmd == 0x80:
-        tcp_command = {'category': 'ACK',
-                       'component': '',
-                       'component_id': '',
-                       'action': '=',
-                       'value': ''}
+        elif cmd == 0x80:
+            tcp_command = {'category': 'ACK',
+                           'component': '',
+                           'component_id': '',
+                           'action': '=',
+                           'value': ''}
 
     return tcp_command
 
 
 def check_fw_or_status(request):
+    """
+    Method to build micro command
+    to check both firmware and status
+    of the micros.
+    @param request: 
+    @return: micro command, uart ports
+    """
     length = '0'
     checksum = '0'
     micro_cmd = ''

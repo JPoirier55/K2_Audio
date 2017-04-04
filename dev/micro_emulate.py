@@ -1,10 +1,17 @@
 import serial
 
-uarts = ['/dev/ttyO4', '/dev/ttyO2']
+uarts = ['/dev/ttyO1', '/dev/ttyO2']
 ser = serial.Serial(uarts[0], 115200)
 
+def send_unsol_test():
+    cmd = 'E80310050021EE'
+    print cmd
+    # msgs = [bytearray.fromhex('E80310180021EE'),bytearray.fromhex('E80310150121EE')]
+    msg = bytearray.fromhex(cmd)
+    ser.write(msg)
+
 def send_unsolicited():
-    for i in range(1,0xCC):
+    for i in range(1, 0xCC):
         cmd = 'E80310{0:02X}0021EE'.format(i)
         print cmd
     # msgs = [bytearray.fromhex('E80310180021EE'),bytearray.fromhex('E80310150121EE')]
@@ -41,5 +48,5 @@ def send_unsolicited():
     ser.close()
 
 if __name__ == '__main__':
-    send_unsolicited()
+    send_unsol_test()
 
