@@ -57,7 +57,9 @@ if __name__ == "__main__":
     #         print "event detected!"
     ser = serial.Serial('/dev/ttyO4', 115200)
     # ba = bytearray.fromhex('E80E42078564523785634455667788942BEE')
-    ba = bytearray.fromhex('E80280006AEE')
+    # ba = bytearray.fromhex('E80280006AEE')
+    # ba = bytearray.fromhex('E803100E020BEE')
+    ba = bytearray.fromhex('E802112520EE')
     # print 'sum: ', calculate_checksum(ba)
     ser.write(ba)
     #

@@ -78,3 +78,79 @@ class CommandHandler:
         uart_send, controller_id = self.calculate_controller(seat_id)
         json_command = self.build_uart_command(seat_id, controller_id, state)
         self.serial_handler.send_uart(json_command, uart_send)
+
+'''
+taken from tcp server, kept as backup
+
+class SerialReceiveHandler:
+
+    def __init__(self, baudrate=115200, timeout=None):
+        """
+        Initialize list of uart ports and setup serial
+        listeners for incoming messages
+        @param baudrate: baudrate, default 115200
+        @param timeout: serial timeout, default None
+        """
+        self.uarts = UART_PORTS
+        self.timeout = timeout
+        serial_listeners = self.setup_listeners()
+
+
+        self.listen_serial(serial_listeners)
+
+    def setup_listeners(self):
+        """
+        Creates array of serial fd handles for
+        each of the uarts on the bb
+        @return: array of serial handles
+        """
+        sers = []
+        for uart in self.uarts:
+            print uart
+            try:
+                ser = serial.Serial(uart, baudrate=115200, timeout=self.timeout)
+                sers.append(ser)
+            except serial.SerialException as e:
+                print 'Serial Exception Thrown on connection: ', e
+                continue
+        return sers
+
+    def listen_serial(self, sers):
+        """
+        While loop for incoming serial messages
+        to be handed when they are able to be handled.
+        Select statement makes this non-blocking reads of
+        serial connections
+        @param sers: array of serial handlers
+        @return: None
+        """
+        while 1:
+            readable, writable, exceptional = select.select(sers, [], sers)
+            for serial_connection in readable:
+                try:
+                    incoming_command = ""
+                    if LOCKS[serial_connection.port].acquire():
+                        # TODO: Check for RTS gpio to see if high
+                        try:
+                            while True:
+                                var = serial_connection.read(1)
+                                if ord(var) == 0xee:
+                                    incoming_command += var
+                                    if DEBUG:
+                                        print ":".join("{:02x}".format(ord(c)) for c in incoming_command), serial_connection.port
+                                    break
+                                else:
+                                    incoming_command += var
+                                serial_connection.write(BB_ACK)
+                        finally:
+                            LOCKS[serial_connection.port].release()
+
+                    msg = handle_unsolicited(incoming_command)
+                    print msg
+                    # self.TCP_CLIENT.sendall(json.dumps(msg))
+
+                except serial.SerialException as e:
+                    print 'Cannot read line, Serial Exception Thrown:  ', e
+                    continue
+
+'''

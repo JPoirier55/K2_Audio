@@ -96,8 +96,14 @@ def s():
 
 
 
+import os
+import subprocess
+if __name__ == '__main__':
 
-# if __name__ == '__main__':
+    # subprocess.call(["export", "READY=1"], shell=True)
+
+    subprocess.call(["echo", "$READY"], shell=True)
+
     # s()
     # t1 = threading.Thread(target=m_1)
     # t2 = threading.Thread(target=m_2)

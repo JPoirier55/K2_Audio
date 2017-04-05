@@ -40,12 +40,10 @@ def serial_worker():
     unsolicted messages
     @return: 
     """
-    # TODO: include readable, writable, exceptional in here
     ser = serial.Serial('/dev/ttyO4', 115200)
     print 'setting up serial'
 
     while True:
-        # TODO: check lock for uart here before proceeding
         incoming_command = ""
         start_char = ser.read(1)
         incoming_command += start_char

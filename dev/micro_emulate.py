@@ -1,6 +1,6 @@
 import serial
 
-uarts = ['/dev/ttyO1', '/dev/ttyO2']
+uarts = ['/dev/ttyO4']
 ser = serial.Serial(uarts[0], 115200)
 
 def send_unsol_test():
@@ -48,5 +48,5 @@ def send_unsolicited():
     ser.close()
 
 if __name__ == '__main__':
-    send_unsol_test()
+    send_unsolicited()
 

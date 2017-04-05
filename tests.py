@@ -224,7 +224,5 @@ class TestButtonMapping(unittest.TestCase):
         self.assertEquals(bytearray.fromhex(cmd7_chk)[-2], calculate_checksum_string(cmd7))
 
 
-# TODO: Test for having checksum == E8 or EE!!
-
 if __name__ == '__main__':
     unittest.main()
