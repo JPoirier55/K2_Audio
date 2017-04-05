@@ -18,6 +18,7 @@ date           programmer         modification
 
 import json
 from message_utils import MessageHandler, error_response, handle_unsolicited
+from button_led_map import map_arrays
 import argparse
 import threading
 from threading import Lock
@@ -26,39 +27,8 @@ import select
 import Queue
 import socket
 import time
+from globals import *
 
-import Adafruit_BBIO.GPIO as GPIO
-
-# TODO: put all of these definitions in a seperate module
-GPIO.setup('P8_41', GPIO.IN)
-GPIO.setup('P8_42', GPIO.IN)
-GPIO.setup('P8_43', GPIO.IN)
-GPIO.setup('P8_44', GPIO.IN)
-
-GPIO.setup('P8_7', GPIO.OUT)
-GPIO.setup('P8_8', GPIO.OUT)
-GPIO.setup('P8_9', GPIO.OUT)
-GPIO.setup('P8_10', GPIO.OUT)
-
-GPIO.setup('USR0', GPIO.OUT)
-GPIO.setup('USR1', GPIO.OUT)
-GPIO.setup('USR2', GPIO.OUT)
-GPIO.setup('USR3', GPIO.OUT)
-
-RTS_GPIOS = ['/sys/class/gpio/gpio74/value', '/sys/class/gpio/gpio75/value',
-             '/sys/class/gpio/gpio72/value', '/sys/class/gpio/gpio73/value']
-GPIO_EDGE_FDS = ['/sys/class/gpio/gpio74/edge', '/sys/class/gpio/gpio75/edge',
-                 '/sys/class/gpio/gpio72/edge', '/sys/class/gpio/gpio73/edge']
-CTS_GPIOS = ['/sys/class/gpio/gpio66/value', '/sys/class/gpio/gpio67/value',
-             '/sys/class/gpio/gpio68/value', '/sys/class/gpio/gpio69/value']
-
-DEBUG = True
-DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
-xUART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
-UART_PORTS = ['/dev/ttyO1', '/dev/ttyO1','/dev/ttyO1','/dev/ttyO1']
-SERVER_QUEUE = Queue.Queue()
-CLIENT_QUEUE = Queue.Queue()
-MIDDLE_QUEUE = Queue.Queue()
 
 uart_lock1 = Lock()
 uart_lock2 = Lock()
@@ -70,15 +40,110 @@ xLOCKS = {'/dev/ttyO1': uart_lock1,
           '/dev/ttyO4': uart_lock4,
           '/dev/ttyO5': uart_lock5}
 
-LOCKS = {'/dev/ttyO1': uart_lock1
-         }
+LOCKS = {'/dev/ttyO1': uart_lock1}
 
-MICRO_ACK = bytearray.fromhex('E8018069EE')
-MICRO_ERR = bytearray.fromhex('E8018069EE')
-BB_ACK = bytearray('E8018069EE')
-DSP_SERVER_IP = '192.168.255.88'
-DSP_SERVER_PORT = 65000
+READY = False
 
+# TODO: DOCUMENT METHODS!!!
+
+class StartUpTester:
+    def __init__(self):
+        #self.uart_ports = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+        self.uart_ports = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
+        self.sers = []
+        self.baudrate = 115200
+        self.timeout = None
+        self.setup_sers()
+
+    def setup_sers(self):
+        for uart in self.uart_ports:
+            self.sers.append(serial.Serial(uart, self.baudrate))
+
+    def calculate_checksum(self, micro_cmd):
+        sum = 0
+        for i in range(len(micro_cmd) - 2):
+            sum += micro_cmd[i]
+        return sum % 0x100
+
+    def read_serial(self, ser):
+        ba, checksum = read_serial_generic(ser)
+
+        c = self.calculate_checksum(ba)
+
+        if c == ord(checksum) and str(ba) == MICRO_ACK:
+            return 1
+        else:
+            return 0
+
+    def send_command(self, message):
+        micro_ack = 0
+        for ser in self.sers:
+            if DEBUG:
+                print 'Current serial connection:', ser
+            ser.write(bytearray.fromhex(message))
+            micro_ack += self.read_serial(ser)
+            time.sleep(.5)
+        if micro_ack == 4:
+            return True
+
+    def run_startup(self):
+        print 'Checking micro connections..'
+        if self.send_command(MICRO_STATUS):
+            print 'Done\nStarting lightup sequence..'
+            if self.send_command(ALL_LEDS):
+                print 'Done'
+                time.sleep(5)
+                print 'Stopping lighting sequence..'
+                self.send_command(ALL_LEDS_OFF)
+                return True
+        return False
+
+    def run_blinky_sequence(self):
+        for led in map_arrays['panel']:
+            ser = self.sers[map_arrays['micro'][led-1]]
+            cmd = 'E8024001{0:0{1}X}00EE'.format(map_arrays['logical'][led-1], 2)
+            chk = self.calculate_checksum(bytearray.fromhex(cmd))
+            cmd = cmd[:-4] + str(hex(chk)[2:]) + cmd[-2:]
+            cmd = bytearray.fromhex(cmd)
+
+            ser.write(cmd)
+            time.sleep(.01)
+
+def startup_worker():
+    s = StartUpTester()
+    while True:
+        if s.run_startup():
+            while True:
+                if not READY:
+                    if DEBUG:
+                        print 'Ready: ', READY
+                    s.run_blinky_sequence()
+                    s.send_command(ALL_LEDS_OFF)
+                else:
+                    if DEBUG:
+                        print 'Ready: ', READY
+                        print 'Stopping startup sequence'
+                    break
+            break
+
+
+def read_serial_generic(ser):
+    checksum = 0
+    ba = bytearray()
+    start_char = ser.read(1)
+    ba.append(start_char)
+
+    if ord(start_char) == 0xe8:
+        length = ser.read(1)
+        ba.append(length)
+        for i in range(ord(length)):
+            cmd_byte = ser.read(1)
+            ba.append(cmd_byte)
+        checksum = ser.read(1)
+        ba.append(checksum)
+        stop_char = ser.read(1)
+        ba.append(stop_char)
+    return ba, checksum
 
 class SerialSendHandler:
     def __init__(self, port, baudrate=115200, timeout=None):
@@ -124,7 +189,7 @@ def serial_handle(uart_command, uart_port):
     @param uart_port: port command comes on
     @return:
     """
-    ser = serial.Serial('/dev/ttyO4', 115200)
+    ser = serial.Serial('/dev/ttyO1', 115200)
     command = bytearray.fromhex(uart_command)
 
     if DEBUG:
@@ -163,79 +228,6 @@ def serial_handle(uart_command, uart_port):
     #             LOCKS[uart_port].release()
     #         break
     # return ack
-
-
-
-class SerialReceiveHandler:
-
-    def __init__(self, baudrate=115200, timeout=None):
-        """
-        Initialize list of uart ports and setup serial
-        listeners for incoming messages
-        @param baudrate: baudrate, default 115200
-        @param timeout: serial timeout, default None
-        """
-        self.uarts = UART_PORTS
-        self.timeout = timeout
-        serial_listeners = self.setup_listeners()
-
-
-        self.listen_serial(serial_listeners)
-
-    def setup_listeners(self):
-        """
-        Creates array of serial fd handles for
-        each of the uarts on the bb
-        @return: array of serial handles
-        """
-        sers = []
-        for uart in self.uarts:
-            print uart
-            try:
-                ser = serial.Serial(uart, baudrate=115200, timeout=self.timeout)
-                sers.append(ser)
-            except serial.SerialException as e:
-                print 'Serial Exception Thrown on connection: ', e
-                continue
-        return sers
-
-    def listen_serial(self, sers):
-        """
-        While loop for incoming serial messages
-        to be handed when they are able to be handled.
-        Select statement makes this non-blocking reads of
-        serial connections
-        @param sers: array of serial handlers
-        @return: None
-        """
-        while 1:
-            readable, writable, exceptional = select.select(sers, [], sers)
-            for serial_connection in readable:
-                try:
-                    incoming_command = ""
-                    if LOCKS[serial_connection.port].acquire():
-                        # TODO: Check for RTS gpio to see if high
-                        try:
-                            while True:
-                                var = serial_connection.read(1)
-                                if ord(var) == 0xee:
-                                    incoming_command += var
-                                    if DEBUG:
-                                        print ":".join("{:02x}".format(ord(c)) for c in incoming_command), serial_connection.port
-                                    break
-                                else:
-                                    incoming_command += var
-                                serial_connection.write(BB_ACK)
-                        finally:
-                            LOCKS[serial_connection.port].release()
-
-                    msg = handle_unsolicited(incoming_command)
-                    print msg
-                    # self.TCP_CLIENT.sendall(json.dumps(msg))
-
-                except serial.SerialException as e:
-                    print 'Cannot read line, Serial Exception Thrown:  ', e
-                    continue
 
 
 class DataHandler:
@@ -349,7 +341,10 @@ def tcp_handler(sock):
     outputs = []
     message_queues = {}
     data_handler = DataHandler()
+    global READY
+
     try:
+        # TODO: Strip this down into something a little more elegant
         while inputs:
 
             if len(inputs) > 5:
@@ -369,10 +364,13 @@ def tcp_handler(sock):
                     message_queues[connection] = Queue.Queue()
                 else:
                     data = s.recv(1024)
+
                     if data:
                         if DEBUG:
                             print 'Data:', data
                         # add to queue if response
+                        # TODO: check for status message as first boot up, then set ready=true
+                        READY = True
                         message_queues[s].put(data)
                         response = data_handler.allocate(data)
                         if DEBUG:
@@ -396,14 +394,6 @@ def tcp_handler(sock):
         return
 
 
-def calculate_checksum(micro_cmd):
-    sum = 0
-    for i in range(len(micro_cmd) - 2):
-        sum += micro_cmd[i]
-
-    return sum%0x100
-
-
 class SerialHandler:
     def __init__(self):
         self.uart_ports = UART_PORTS
@@ -414,7 +404,6 @@ class SerialHandler:
         self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.TCP_CLIENT.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
 
-
     def setup(self):
         if DEBUG:
             print 'Setting up Serial connections'
@@ -422,48 +411,34 @@ class SerialHandler:
             new_ser = serial.Serial(uart, 115200)
             self.sers.append(new_ser)
 
+    def send_tcp(self, unsol_msg, uart_port):
 
-    def break_down(self):
-        # TODO: close connections and files?
-        if DEBUG:
-            print 'Breaking down Serial connections'
-        # close
-
-    def send_tcp(self, unsol_msg):
-
-        tcp_message = handle_unsolicited(unsol_msg)
+        tcp_message = handle_unsolicited(unsol_msg, uart_port)
         if DEBUG:
             print 'TCP Message: ', tcp_message
         self.TCP_CLIENT.send(json.dumps(tcp_message))
+        return True
 
+    def calculate_checksum(self, micro_cmd):
+        sum = 0
+        for i in range(len(micro_cmd) - 2):
+            sum += micro_cmd[i]
+
+        return sum % 0x100
 
     def handle_message(self):
-        print self.ser
+        if DEBUG:
+            print "Serial connection: ", self.ser
         try:
             # TODO: use except to catch issues, return error message
-            ba = bytearray()
-            checksum = 0
-            start_char = self.ser.read(1)
-            ba.append(start_char)
+            ba, checksum = read_serial_generic(self.ser)
 
-            if ord(start_char) == 0xe8:
-                length = self.ser.read(1)
-                ba.append(length)
-                for i in range(ord(length)):
-                    cmd_byte = self.ser.read(1)
-                    ba.append(cmd_byte)
-                checksum = self.ser.read(1)
-                ba.append(checksum)
-                stop_char = self.ser.read(1)
-                ba.append(stop_char)
-
-
-            c = calculate_checksum(ba)
+            c = self.calculate_checksum(ba)
             if DEBUG:
                 print 'Checksum: ', c, ord(checksum)
             if c == ord(checksum):
                 print 'tcp time'
-                if self.send_tcp(str(ba)):
+                if self.send_tcp(str(ba), self.ser.port):
                     self.ser.write(MICRO_ACK)
                 else:
                     self.ser.write(MICRO_ERR)
@@ -491,7 +466,6 @@ class SerialHandler:
                         print 'Serial lock released'
                     break
 
-
     def serial_worker(self):
         """
         Serial thread which listens for incoming
@@ -517,26 +491,18 @@ class SerialHandler:
             for e in exceptional:
                 if e == self.gpio_fds[0]:
                     if int(vals[0]) == 1:
-                        print 'gpio 0'
-                        print int(vals[0])
                         self.handle_locks(0)
 
                 elif e == self.gpio_fds[1]:
                     if int(vals[1]) == 1:
-                        print 'gpio 1'
-                        print int(vals[1])
                         self.handle_locks(1)
 
                 elif e == self.gpio_fds[2]:
                     if int(vals[2]) == 1:
-                        print 'gpio 2'
-                        print int(vals[2])
                         self.handle_locks(2)
 
                 elif e == self.gpio_fds[3]:
                     if int(vals[3]) ==1:
-                        print 'gpio 3'
-                        print int(vals[3])
                         self.handle_locks(3)
 
             vals = []
@@ -544,6 +510,8 @@ class SerialHandler:
 
 
 if __name__ == "__main__":
+
+    # TODO: Make this its own CLI and create global for READY variable that gets checked in startup_checks
     parser = argparse.ArgumentParser(description='Provide port and host for TCP server')
     parser.add_argument('--h', '--HOST', default='0.0.0.0', help='Host ipv4 address (default 0.0.0.0)')
     parser.add_argument('--p', '--PORT', default=65000, help='Port (default 65000)')
@@ -559,12 +527,17 @@ if __name__ == "__main__":
     serial_thread.daemon = True
     serial_thread.start()
 
+    startup_thread = threading.Thread(target=startup_worker)
+    startup_thread.daemon = True
+    startup_thread.start()
+
     server_address = (HOST, int(PORT))
     print 'Starting server on:', server_address
 
     sock.bind(server_address)
     sock.setblocking(0)
     sock.listen(1)
+
     # while True:
     tcp_handler(sock)
 

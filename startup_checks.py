@@ -1,9 +1,13 @@
 import serial
 import time
+from button_led_map import map_arrays
+import os
+from tcp_server import START_LOCK
 
 DEBUG = False
 MICRO_STATUS = 'E80231001BEE'
-ALL_LEDS = 'E80240F822EE'
+ALL_LEDS = 'E80240F80123EE'
+ALL_LEDS_OFF = 'E80240F80022EE'
 MICRO_ACK = 'E8018069EE'
 
 class StartUpTester:
@@ -23,7 +27,6 @@ class StartUpTester:
         sum = 0
         for i in range(len(micro_cmd) - 2):
             sum += micro_cmd[i]
-
         return sum % 0x100
 
     def read_serial(self, ser):
@@ -75,14 +78,54 @@ class StartUpTester:
         if micro_acks == 4:
             return True
 
+    def stop_lighting(self):
+        micro_acks = 0
+        for ser in self.sers:
+            if DEBUG:
+                print 'Current serial connections:', ser
+            ser.write(bytearray.fromhex(ALL_LEDS_OFF))
+            micro_acks += self.read_serial(ser)
+            time.sleep(.5)
+        if micro_acks == 4:
+            return True
+
     def run_startup(self):
         print 'Checking micro connections..'
         if self.check_micros():
             print 'Done\nStarting lightup sequence..'
             if self.start_lightup():
                 print 'Done'
+                time.sleep(5)
+                print 'Stopping lighting sequence..'
+                self.stop_lighting()
 
-if __name__ == '__main__':
+    def run_blinky_sequence(self):
+        for led in map_arrays['panel']:
+            ser = self.sers[map_arrays['micro'][led-1]]
+            cmd = 'E8024001{0:0{1}X}00EE'.format(map_arrays['logical'][led-1], 2)
+            print cmd
+            chk = self.calculate_checksum(bytearray.fromhex(cmd))
+            cmd = cmd[:-4] + str(hex(chk)[2:]) + cmd[-2:]
+
+            cmd = bytearray.fromhex(cmd)
+
+            ser.write(cmd)
+            time.sleep(.01)
+
+def worker():
+
     s = StartUpTester()
     s.run_startup()
+    while True:
+        try:
+            if START_LOCK.acquire():
+                s.run_blinky_sequence()
+                s.stop_lighting()
+        finally:
+            START_LOCK.release()
+
+# if __name__ == '__main__':
+
+
+
 
