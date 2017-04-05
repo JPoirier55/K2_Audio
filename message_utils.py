@@ -14,7 +14,7 @@ date           programmer         modification
 """
 from copy import deepcopy
 import status_utils
-from button_led_map import map_arrays
+from button_led_map import *
 from command_map import *
 
 DEBUG = True
@@ -346,7 +346,7 @@ def translate_single_led(command):
     return micro_cmd, uart_port
 
 
-def handle_unsolicited(micro_command):
+def handle_unsolicited(micro_command, uart_port):
     """
     Handles incoming unsolicited commands
     from the micro. First checks checksum
@@ -368,13 +368,20 @@ def handle_unsolicited(micro_command):
     tcp_command = {}
     if checksum == cs:
         if cmd == 0x10:
-            button_number = ord(micro_command[3])
+            micro_button_number = ord(micro_command[3])
+            if DEBUG:
+                print ":".join("{:02x}".format(ord(c)) for c in micro_command)
+
+            button_index = micro_array[uart_port]['logical'].index(micro_button_number)
+            panel_button_number = micro_array[uart_port]['panel'][button_index]
+
             value = ord(micro_command[4])
             tcp_command = {'category': 'BTN',
                            'component':'SW',
-                           'component_id': button_number,
+                           'component_id': panel_button_number,
                            'action': '=',
                            'value': value}
+
         elif cmd == 0x11:
             value = ord(micro_command[3])
             tcp_command = {'category': 'ENC',
