@@ -9,11 +9,6 @@ Currently only supports IPv4
 
 WRITTEN BY: Jake Poirier
 
-MODIFICATION HISTORY:
-
-date           programmer         modification
------------------------------------------------
-2/1/17          JDP                original
 """
 
 import json
@@ -46,9 +41,10 @@ READY = False
 
 # TODO: DOCUMENT METHODS!!!
 
+
 class StartUpTester:
     def __init__(self):
-        #self.uart_ports = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+        # self.uart_ports = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
         self.uart_ports = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
         self.sers = []
         self.baudrate = 115200
@@ -56,16 +52,35 @@ class StartUpTester:
         self.setup_sers()
 
     def setup_sers(self):
+        """
+        Create list of serial file descriptors
+        needed for running the initial start sequence
+        @return: None
+        """
         for uart in self.uart_ports:
             self.sers.append(serial.Serial(uart, self.baudrate))
 
     def calculate_checksum(self, micro_cmd):
+        """
+        Calculate checksum from micro_cmd bytearray
+        object. Same method as in message_utils,
+        but used here as well.
+        @param micro_cmd: incoming micro command bytearray
+        @return: checksum integer
+        """
         sum = 0
         for i in range(len(micro_cmd) - 2):
             sum += micro_cmd[i]
         return sum % 0x100
 
     def read_serial(self, ser):
+        """
+        Method to read incoming message from
+        micro after sending message
+        @param ser: serial object
+        @return: 1 - checksum correct and ack received
+                 2 - either checksum or ack not correct/received
+        """
         ba, checksum = read_serial_generic(ser)
 
         c = self.calculate_checksum(ba)
@@ -75,18 +90,34 @@ class StartUpTester:
         else:
             return 0
 
-    def send_command(self, message):
+    def send_command(self, micro_cmd):
+        """
+        Send micro command for initial startup
+        sequence, and read incoming ack
+        @param message: outgoing micro command
+        @return: True - If all four acks have been received
+                 False - If less than four received
+        """
         micro_ack = 0
         for ser in self.sers:
             if DEBUG:
                 print 'Current serial connection:', ser
-            ser.write(bytearray.fromhex(message))
+            ser.write(bytearray.fromhex(micro_cmd))
             micro_ack += self.read_serial(ser)
             time.sleep(.5)
         if micro_ack == 4:
             return True
+        return False
 
     def run_startup(self):
+        """
+        Run startup sequence of commands to
+        check all four micros, then have all
+        LEDs come on, wait 5 seconds, then 
+        turn off.
+        @return: True - If everything worked
+                 False - If an error occurred
+        """
         print 'Checking micro connections..'
         if self.send_command(MICRO_STATUS):
             print 'Done\nStarting lightup sequence..'
@@ -99,6 +130,13 @@ class StartUpTester:
         return False
 
     def run_blinky_sequence(self):
+        """
+        Iterate through LEDs on control board
+        to turn on in the order 1-2-3-...202-203
+        Each one has a wait of .1 seconds between
+        turning on
+        @return: None
+        """
         for led in map_arrays['panel']:
             ser = self.sers[map_arrays['micro'][led-1]]
             cmd = 'E8024001{0:0{1}X}00EE'.format(map_arrays['logical'][led-1], 2)
@@ -109,7 +147,18 @@ class StartUpTester:
             ser.write(cmd)
             time.sleep(.01)
 
+
 def startup_worker():
+    """
+    Thread which runs the startup sequence 
+    until the READY global variable is False.
+    This sequence is essentially waiting for 
+    the DSP to send a status update message, 
+    when its time to reconnect. This thread
+    will run until that message is sent, and
+    will be killed when it is sent.
+    @return: None, thread closed
+    """
     s = StartUpTester()
     while True:
         if s.run_startup():
@@ -145,6 +194,7 @@ def read_serial_generic(ser):
         ba.append(stop_char)
     return ba, checksum
 
+
 class SerialSendHandler:
     def __init__(self, port, baudrate=115200, timeout=None):
         """
@@ -168,8 +218,7 @@ class SerialSendHandler:
         """
         Connect to serial connection and send command.
         Then close serial connection
-        @param json_command: Command to be sent to uart
-        @param uart_send: port to write command to
+        @param command: 
         @return: None
         """
         print 'sending: ', command, " ", self.port
@@ -198,7 +247,6 @@ def serial_handle(uart_command, uart_port):
     ser.write(command)
     ser.close()
     return True
-
 
     # ack = False
     # while True:
@@ -231,6 +279,9 @@ def serial_handle(uart_command, uart_port):
 
 
 class DataHandler:
+
+    def __init__(self):
+        pass
 
     def handle_all_msg(self, uart_command):
         """
@@ -348,7 +399,7 @@ def tcp_handler(sock):
         while inputs:
 
             if len(inputs) > 5:
-                for t in range(1,len(inputs)-1):
+                for t in range(1, len(inputs)-1):
                     inputs[t].close()
                 inputs = [inputs[0], inputs[len(inputs)-1]]
 
@@ -486,7 +537,6 @@ class SerialHandler:
             for fd in self.gpio_fds:
                 vals.append(fd.read())
 
-
             readable, writable, exceptional = select.select([], [], self.gpio_fds, 5)
             for e in exceptional:
                 if e == self.gpio_fds[0]:
@@ -502,7 +552,7 @@ class SerialHandler:
                         self.handle_locks(2)
 
                 elif e == self.gpio_fds[3]:
-                    if int(vals[3]) ==1:
+                    if int(vals[3]) == 1:
                         self.handle_locks(3)
 
             vals = []
@@ -540,4 +590,3 @@ if __name__ == "__main__":
 
     # while True:
     tcp_handler(sock)
-

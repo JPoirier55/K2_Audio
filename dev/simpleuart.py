@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # while True:
     #     if GPIO.event_detected("P8_41"):
     #         print "event detected!"
-    ser = serial.Serial('/dev/ttyO4', 115200)
+    ser = serial.Serial('/dev/ttyO2', 115200)
     # ba = bytearray.fromhex('E80E42078564523785634455667788942BEE')
     # ba = bytearray.fromhex('E80280006AEE')
     # ba = bytearray.fromhex('E803100E020BEE')

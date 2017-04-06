@@ -135,10 +135,10 @@ def calculate_checksum_string(micro_cmd):
     @return: checksum
     """
     sum = 0
-    ba =  bytearray.fromhex(str(micro_cmd[:-3]))
+    ba = bytearray.fromhex(str(micro_cmd[:-3]))
     for i in range(len(ba)):
         sum += ba[i]
-    return sum%0x100
+    return sum % 0x100
 
 
 def calculate_checksum_bytes(micro_cmd):
@@ -153,7 +153,7 @@ def calculate_checksum_bytes(micro_cmd):
     sum = 0
     for i in range(len(micro_cmd)-2):
         sum += ord(micro_cmd[i])
-    return sum%0x100
+    return sum % 0x100
 
 
 def finalize_cmd(micro_cmd):
@@ -231,7 +231,7 @@ def translate_all_led(command):
     command_byte = command_dict['set_led_button']
 
     micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0{6}X}{4}{5:0{6}X}".format(start_char, length, command_byte,
-                                                                         parameters, checksum, stop_char, 2)
+                                                                    parameters, checksum, stop_char, 2)
     micro_cmd = finalize_cmd(micro_cmd)
 
     return micro_cmd, 'ALL'
@@ -279,10 +279,10 @@ def translate_cfg_cmd(dsp_command):
         return None
     if action == 'GET':
         micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte,
-                                                                      checksum, stop_char, 2)
+                                                                 checksum, stop_char, 2)
     else:
         micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0>2}{4}{5:0{6}X}".format(start_char, length, command_byte,
-                                                                          parameters, checksum, stop_char, 2)
+                                                                      parameters, checksum, stop_char, 2)
     micro_cmd = finalize_cmd(micro_cmd)
 
     return micro_cmd, UART_PORTS[0]
@@ -315,10 +315,10 @@ def translate_enc_cmd(command):
         return None
     if action == 'GET':
         micro_cmd = "{0:0{5}X}{1:0>2}{2:0{5}X}00{3:0>2}{4:0{5}X}".format(start_char, length, command_byte,
-                                                                              checksum, stop_char, 2)
+                                                                         checksum, stop_char, 2)
     else:
         micro_cmd = "{0:0{6}X}{1:0>2}{2:0{6}X}{3:0>2}{4:0>2}{5:0{6}X}".format(start_char, length, command_byte,
-                                                                    parameters, checksum, stop_char, 2)
+                                                                              parameters, checksum, stop_char, 2)
 
     micro_cmd = finalize_cmd(micro_cmd)
     return micro_cmd, UART_PORTS[0]
@@ -339,7 +339,7 @@ def translate_single_led(command):
     command_byte = command_dict['set_led_button']
 
     micro_cmd = "{0:0{7}X}{1}{2:0{7}X}{3:0{7}X}{4:0{7}X}{5}{6:0{7}X}".format(start_char, length, command_byte,
-                                                                    value, parameter, checksum, stop_char, 2)
+                                                                             value, parameter, checksum, stop_char, 2)
 
     micro_cmd = finalize_cmd(micro_cmd)
 
@@ -357,7 +357,6 @@ def handle_unsolicited(micro_command, uart_port):
     """
     for b in micro_command:
         print ord(b)
-
 
     cmd = ord(micro_command[2])
     checksum = ord(micro_command[-2])
@@ -377,7 +376,7 @@ def handle_unsolicited(micro_command, uart_port):
 
             value = ord(micro_command[4])
             tcp_command = {'category': 'BTN',
-                           'component':'SW',
+                           'component': 'SW',
                            'component_id': panel_button_number,
                            'action': '=',
                            'value': value}
@@ -431,11 +430,13 @@ def check_fw_or_status(request):
 
     if request == 'firmware':
         command_byte = command_dict['get_fw_version']
-        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte, checksum, stop_char, 2)
+        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte,
+                                                                 checksum, stop_char, 2)
 
     if request == 'status':
         command_byte = command_dict['get_panel_status']
-        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte, checksum, stop_char, 2)
+        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte,
+                                                                 checksum, stop_char, 2)
 
     finalize_cmd(micro_cmd)
     return micro_cmd, 'ALL'

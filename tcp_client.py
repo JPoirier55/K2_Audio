@@ -45,7 +45,8 @@ class MicroMessageHandler:
         """
         if 'BN_LED' in self.message:
             print 'btn led'
-            self.send_tcp("{\"category\": \"BTN\",\"component\": \"LED\",\"component_id\": \"150\",\"action\": \"=\", \"value\":\"1\"}")
+            self.send_tcp("{\"category\": \"BTN\",\"component\": \"LED\","
+                          "\"component_id\": \"150\",\"action\": \"=\", \"value\":\"1\"}")
         if self.category == 'BTN_LED':
             self.send_tcp("{\"BTN\": \"23\"}")
             print 'btn switch'
@@ -72,4 +73,5 @@ def client(ip, port, message):
         sock.close()
 
 if __name__ == "__main__":
-    client('0.0.0.0', 65000, "{\"category\": \"BTN\",\"component\": \"LED\",\"component_id\": \"150\",\"action\": \"=\", \"value\":\"1\"}")
+    client('0.0.0.0', 65000, "{\"category\": \"BTN\",\"component\": \"LED\","
+                             "\"component_id\": \"150\",\"action\": \"=\", \"value\":\"1\"}")

@@ -10,9 +10,10 @@ ALL_LEDS = 'E80240F80123EE'
 ALL_LEDS_OFF = 'E80240F80022EE'
 MICRO_ACK = 'E8018069EE'
 
+
 class StartUpTester:
     def __init__(self):
-        #self.uart_ports = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+        # self.uart_ports = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
         self.uart_ports = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
         self.sers = []
         self.baudrate = 115200
@@ -112,6 +113,7 @@ class StartUpTester:
             ser.write(cmd)
             time.sleep(.01)
 
+
 def worker():
 
     s = StartUpTester()
@@ -123,9 +125,3 @@ def worker():
                 s.stop_lighting()
         finally:
             START_LOCK.release()
-
-# if __name__ == '__main__':
-
-
-
-

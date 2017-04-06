@@ -1,4 +1,16 @@
+"""
+FILE:   globals.py
+DESCRIPTION: All global variables contained in one module used by 
+tcp_server.py
 
+WRITTEN BY: Jake Poirier
+
+MODIFICATION HISTORY:
+
+date           programmer         modification
+-----------------------------------------------
+4/5/17          JDP                original
+"""
 
 import Adafruit_BBIO.GPIO as GPIO
 
@@ -27,7 +39,7 @@ CTS_GPIOS = ['/sys/class/gpio/gpio66/value', '/sys/class/gpio/gpio67/value',
 DEBUG = True
 DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
 xUART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
-UART_PORTS = ['/dev/ttyO1', '/dev/ttyO1','/dev/ttyO1','/dev/ttyO1']
+UART_PORTS = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
 
 MICRO_ACK = bytearray.fromhex('E8018069EE')
 MICRO_ERR = bytearray.fromhex('E8018069EE')
@@ -37,4 +49,3 @@ DSP_SERVER_PORT = 65000
 MICRO_STATUS = 'E80231001BEE'
 ALL_LEDS = 'E80240F80123EE'
 ALL_LEDS_OFF = 'E80240F80022EE'
-
