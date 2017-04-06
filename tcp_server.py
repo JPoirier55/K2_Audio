@@ -30,12 +30,12 @@ uart_lock2 = Lock()
 uart_lock4 = Lock()
 uart_lock5 = Lock()
 
-xLOCKS = {'/dev/ttyO1': uart_lock1,
-          '/dev/ttyO2': uart_lock2,
-          '/dev/ttyO4': uart_lock4,
-          '/dev/ttyO5': uart_lock5}
+LOCKS = {'/dev/ttyO1': uart_lock1,
+         '/dev/ttyO2': uart_lock2,
+         '/dev/ttyO4': uart_lock4,
+         '/dev/ttyO5': uart_lock5}
 
-LOCKS = {'/dev/ttyO1': uart_lock1}
+xLOCKS = {'/dev/ttyO1': uart_lock1}
 
 READY = False
 
@@ -45,7 +45,7 @@ READY = False
 class StartUpTester:
     def __init__(self):
         # self.uart_ports = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
-        self.uart_ports = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
+        self.uart_ports = UART_PORTS
         self.sers = []
         self.baudrate = 115200
         self.timeout = None

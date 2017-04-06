@@ -38,8 +38,8 @@ CTS_GPIOS = ['/sys/class/gpio/gpio66/value', '/sys/class/gpio/gpio67/value',
 
 DEBUG = True
 DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
-xUART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
-UART_PORTS = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
+UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+xUART_PORTS = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
 
 MICRO_ACK = bytearray.fromhex('E8018069EE')
 MICRO_ERR = bytearray.fromhex('E8018069EE')
