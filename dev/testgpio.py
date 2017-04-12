@@ -1,47 +1,174 @@
-import Adafruit_BBIO.GPIO as GPIO
-import time
 import serial
-#GPIO.setup('P8_8', GPIO.OUT)
-GPIO.setup('P8_7', GPIO.IN)
-GPIO.setup('P8_8', GPIO.IN)
-GPIO.setup('P8_9', GPIO.OUT)
-GPIO.setup('P8_10', GPIO.OUT)
+import Adafruit_BBIO.GPIO as GPIO
+import select
+import time
+
+# GPIO.setup('P8_39', GPIO.OUT)
+GPIO.setup('P8_40', GPIO.IN)
+# GPIO.setup('P8_41', GPIO.OUT)
+GPIO.setup('P8_42', GPIO.IN)
+# # GPIO.setup('P8_43', GPIO.OUT)
+GPIO.setup('P8_44', GPIO.IN)
+# # GPIO.setup('P8_45', GPIO.OUT)
+GPIO.setup('P8_46', GPIO.IN)
+
+# RTS_GPIOS = ['/sys/class/gpio/gpio77/value']
+# GPIO_EDGE_FDS = ['/sys/class/gpio/gpio77/edge']
+# CTS_GPIOS = ['/sys/class/gpio/gpio77/value']
+# CTS_GPIOS = ['P8_39']
+
+# GPIO.add_event_detect("P8_40", GPIO.BOTH)
+# GPIO.add_event_detect("P8_42", GPIO.BOTH)
+# GPIO.add_event_detect("P8_44", GPIO.BOTH)
+# GPIO.add_event_detect("P8_46", GPIO.BOTH)
+
+# RTS_GPIOS = ['/sys/class/gpio/gpio70/value', '/sys/class/gpio/gpio72/value',
+#              '/sys/class/gpio/gpio74/value', '/sys/class/gpio/gpio76/value']
+# RTS_GPIO_EDGE_FDS = ['/sys/class/gpio/gpio70/edge', '/sys/class/gpio/gpio72/edge',
+#                      '/sys/class/gpio/gpio74/edge', '/sys/class/gpio/gpio76/edge']
+#
+#
+CTS_GPIOS = ['/sys/class/gpio/gpio77/value', '/sys/class/gpio/gpio75/value',
+             '/sys/class/gpio/gpio73/value', '/sys/class/gpio/gpio71/value']
+GPIO_EDGE_FDS = ['/sys/class/gpio/gpio77/edge', '/sys/class/gpio/gpio75/edge',
+                 '/sys/class/gpio/gpio73/edge', '/sys/class/gpio/gpio71/edge']
 
 
-ser1 = serial.Serial('/dev/ttyO4', 115200)
-ser2 = serial.Serial('/dev/ttyO1', 115200)
-
-def read_input(ser):
-    cmd = ""
+def serial_worker():
+    """
+    Serial thread which listens for incoming
+    unsolicted messages
+    @return: 
+    """
+    gpio_fds = []
+    vals = []
     while True:
-        # TODO: check lock for that uart port in tcp_server
-        var = ser.read(1)
-        print var
-        if ord(var) == 0xee:
-            cmd += var
-            break
-        else:
-            cmd += var
-    return cmd
 
-def start():
+        for gpio in CTS_GPIOS:
+            open_file = open(gpio)
+            gpio_fds.append(open_file)
+
+        for gpio_edge_fd in GPIO_EDGE_FDS:
+            fd = open(gpio_edge_fd, 'w')
+            fd.write("both")
+
+        for fd in gpio_fds:
+            vals.append(fd.read())
+        readable, writable, exceptional = select.select([], [], gpio_fds, 5)
+        print exceptional
+        for e in exceptional:
+            if e:
+                print e
+            # if e == gpio_fds[0]:
+            #     # print vals[0]
+            #     # print 'okay'
+            #     if int(vals[0]) == 1:
+            #         print gpio_fds[0]
+            #         print 'gpio 0'
+            # if e == gpio_fds[1]:
+            #     # print vals[0]
+            #     # print 'okay'
+            #     if int(vals[1]) == 1:
+            #         print gpio_fds[1]
+            #         print 'gpio 1'
+            # if e == gpio_fds[2]:
+            #     # print vals[0]
+            #     # print 'okay'
+            #     if int(vals[2]) == 1:
+            #         print gpio_fds[2]
+            #         print 'gpio 2'
+            # if e == gpio_fds[3]:
+            #     # print vals[0]
+            #     # print 'okay'
+            #     if int(vals[3]) == 1:
+            #         print gpio_fds[3]
+            #         print 'gpio 3'
+
+        vals = []
+        gpio_fds = []
+
+#
+# def send_msg():
+#     GPIO.output("P8_39", GPIO.LOW)
+#     GPIO.output("P8_41", GPIO.LOW)
+#     GPIO.output("P8_43", GPIO.LOW)
+#
+#     # print GPIO.event_detected("P8_41")
+#     while True:
+#         if GPIO.event_detected("P8_40"):
+#             print 'sending'
+#             ser = serial.Serial('/dev/ttyO5', 115200)
+#             ser.write('E80310050021EE')
+#         print 'trying'
+#         time.sleep(.5)
+
+if __name__ == "__main__":
+    # send_msg()
+    serial_worker()
+    # print GPIO.setup('P8_41', GPIO.IN)
+    # GPIO.setup('P8_42', GPIO.IN)
+    # GPIO.setup('P8_43', GPIO.IN)
+    # GPIO.setup('P8_44', GPIO.IN)
+
+    GPIO.add_event_detect("P8_40", GPIO.BOTH)
+    # print GPIO.event_detected("P8_41")
     while True:
-        if GPIO.input("P8_7"):
-            ser1.flushInput()
-            GPIO.output("P8_9", GPIO.HIGH)
-            print 'gpio 7'
-            cmd = read_input(ser1)
-            print ":".join("{:02x}".format(ord(c)) for c in cmd)
-            ser1.write(bytearray.fromhex('E8020200ECEE'))
-            GPIO.output("P8_9", GPIO.LOW)
+        if GPIO.event_detected("P8_40"):
+            print "event detected!"
 
-        if not GPIO.input("P8_8"):
-            ser2.flushInput()
-            GPIO.output("P8_10", GPIO.HIGH)
-            print 'gpio 8'
-            cmd = read_input(ser2)
-            print ":".join("{:02x}".format(ord(c)) for c in cmd)
+    # ser = serial.Serial('/dev/ttyO4', 115200)
+    # # ba = bytearray.fromhex('E80E42078564523785634455667788942BEE')
+    # # ba = bytearray.fromhex('E80280006AEE')
+    # # ba = bytearray.fromhex('E803100E020BEE')
+    # ba = bytearray.fromhex('E802112520EE')
+    # # print 'sum: ', calculate_checksum(ba)
+    # ser.write(ba)
+    # #
+    # while True:
+    #     t  = ser.read(1)
+    #     print hex(ord(t))
 
 
-if __name__ == '__main__':
-    start()
+
+# ser1 = serial.Serial('/dev/ttyO4', 115200)
+# ser2 = serial.Serial('/dev/ttyO1', 115200)
+
+
+# def read_input(ser):
+#     cmd = ""
+#     while True:
+#         # TODO: check lock for that uart port in tcp_server
+#         var = ser.read(1)
+#         print var
+#         if ord(var) == 0xee:
+#             cmd += var
+#             break
+#         else:
+#             cmd += var
+#     return cmd
+#
+#
+# def start():
+#     while True:
+#         if GPIO.input("P8_7"):
+#             ser1.flushInput()
+#             GPIO.output("P8_9", GPIO.HIGH)
+#             print 'gpio 7'
+#             cmd = read_input(ser1)
+#             print ":".join("{:02x}".format(ord(c)) for c in cmd)
+#             ser1.write(bytearray.fromhex('E8020200ECEE'))
+#             GPIO.output("P8_9", GPIO.LOW)
+#
+#         if not GPIO.input("P8_8"):
+#             ser2.flushInput()
+#             GPIO.output("P8_10", GPIO.HIGH)
+#             print 'gpio 8'
+#             cmd = read_input(ser2)
+#             print ":".join("{:02x}".format(ord(c)) for c in cmd)
+
+#
+# if __name__ == '__main__':
+#     print 'low'
+#     GPIO.output("P8_39", GPIO.LOW)
+#     print 'high'
+#     GPIO.output("P8_39", GPIO.HIGH)

@@ -524,7 +524,8 @@ class MessageHandler:
         results in all LEDs turning on. This command will
         split and allocate all incoming panel_ids into <16
         len arrays
-        @return:
+        @return: tuple of format:
+                    tcp_response, (micro command, uart port)
 
         """
         command = deepcopy(self.json_request)

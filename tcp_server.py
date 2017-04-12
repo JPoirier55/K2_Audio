@@ -177,14 +177,29 @@ def startup_worker():
 
 
 def read_serial_generic(ser):
+    """
+    Method to read any incoming message that
+    falls within the format of our protocol between
+    Beaglebone and micro.
+    Example message: E8021005FFEE
+    See command_map.py for all message
+    parameters and definitions
+    @param ser: Serial object being read from
+    @return: Tuple of message in bytes, and checksum
+    """
     checksum = 0
+    print 'reading serial?', ser
     ba = bytearray()
     start_char = ser.read(1)
+    print 'reading'
     ba.append(start_char)
 
     if ord(start_char) == 0xe8:
+        print 'got startchar'
         length = ser.read(1)
+        print 'got length', ord(length)
         ba.append(length)
+
         for i in range(ord(length)):
             cmd_byte = ser.read(1)
             ba.append(cmd_byte)
@@ -192,6 +207,8 @@ def read_serial_generic(ser):
         ba.append(checksum)
         stop_char = ser.read(1)
         ba.append(stop_char)
+    if len(ba) == 0:
+        return None, None
     return ba, checksum
 
 
@@ -297,7 +314,6 @@ class DataHandler:
                 break
         if ack_num == 4:
             return True
-
         else:
             return False
 
@@ -329,7 +345,6 @@ class DataHandler:
         @param uart_port: 
         @return: 
         """
-
         if(serial_handle(uart_command, uart_port)):
             return True
         else:
@@ -456,6 +471,12 @@ class SerialHandler:
         self.TCP_CLIENT.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
 
     def setup(self):
+        """
+        Create new serial objects to be used to
+        read incoming serial messages, append
+        them to an array
+        @return: None
+        """
         if DEBUG:
             print 'Setting up Serial connections'
         for uart in self.uart_ports:
@@ -463,14 +484,29 @@ class SerialHandler:
             self.sers.append(new_ser)
 
     def send_tcp(self, unsol_msg, uart_port):
-
+        """
+        Send TCP through to DSP with whatever
+        the micro command translates to. This is 
+        generally an unsolicited message
+        @param unsol_msg: incoming message from micro
+        @param uart_port: port being read from
+        @return: True if sent, False if not
+        """
         tcp_message = handle_unsolicited(unsol_msg, uart_port)
         if DEBUG:
             print 'TCP Message: ', tcp_message
         self.TCP_CLIENT.send(json.dumps(tcp_message))
+        # TODO: return False if can't send it
         return True
 
     def calculate_checksum(self, micro_cmd):
+        """
+        Class method for handling checksum 
+        calculation for micro commands
+        @param micro_cmd: incoming command
+        @return: sum of the checksum mod 0x100 
+        to keep it within a byte
+        """
         sum = 0
         for i in range(len(micro_cmd) - 2):
             sum += micro_cmd[i]
@@ -478,41 +514,60 @@ class SerialHandler:
         return sum % 0x100
 
     def handle_message(self):
+        """
+        Reads message and handles checking for
+        correct checksum and returns an error
+        or an acknowledgement depending on if 
+        the incoming message was good. Sends out tcp
+        message if okay, error back to micro if not.
+        @return: None
+        """
         if DEBUG:
             print "Serial connection: ", self.ser
         try:
             # TODO: use except to catch issues, return error message
             ba, checksum = read_serial_generic(self.ser)
-
-            c = self.calculate_checksum(ba)
-            if DEBUG:
-                print 'Checksum: ', c, ord(checksum)
-            if c == ord(checksum):
-                print 'tcp time'
-                if self.send_tcp(str(ba), self.ser.port):
-                    self.ser.write(MICRO_ACK)
+            if ba is not None:
+                c = self.calculate_checksum(ba)
+                if DEBUG:
+                    print 'Checksum: ', c, ord(checksum)
+                if c == ord(checksum):
+                    if self.send_tcp(str(ba), self.ser.port):
+                        self.ser.write(MICRO_ACK)
+                    else:
+                        self.ser.write(MICRO_ERR)
                 else:
                     self.ser.write(MICRO_ERR)
-            else:
-                # TODO: catch this error and respond wtih error message
-                print 'bad checksum'
         except Exception, e:
             print e
 
     def handle_locks(self, port_index):
+        """
+        Checks and acquires locks for whatever port 
+        the incoming message will come in on. The 
+        RTS which has been flagged will be the port
+        index and will follow through to set correct
+        serial object and CTS flag
+        @param port_index: incoming RTS index
+        @return: None
+        """
         while True:
             if LOCKS[self.uart_ports[port_index]].acquire():
                 try:
                     if DEBUG:
                         print 'Serial lock acquired'
+                    print 'PORT INDEX', port_index
                     self.ser = self.sers[port_index]
                     self.ser.flushInput()
-                    GPIO.output("USR{0}".format(port_index), GPIO.HIGH)
+                    # GPIO.output("USR{0}".format(port_index), GPIO.HIGH)
+                    print CTS_GPIOS[port_index]
+                    GPIO.output(CTS_GPIOS[port_index], GPIO.HIGH)
                     self.handle_message()
 
                 finally:
                     LOCKS[self.uart_ports[port_index]].release()
-                    GPIO.output("USR{0}".format(port_index), GPIO.LOW)
+                    # GPIO.output("USR{0}".format(port_index), GPIO.LOW)
+                    GPIO.output(CTS_GPIOS[port_index], GPIO.LOW)
                     if DEBUG:
                         print 'Serial lock released'
                     break
@@ -520,12 +575,16 @@ class SerialHandler:
     def serial_worker(self):
         """
         Serial thread which listens for incoming
-        unsolicted messages
-        @return: 
+        unsolicted messages. Depending on the incoming
+        gpio that is read, the file descriptor will 
+        trigger and set the port index used in 
+        handle_locks. The select exceptional statement
+        won't get called until one of the file descriptors
+        has changed, aka RTS has been flagged.
+        @return: None 
         """
         vals = []
         while True:
-
             for gpio in RTS_GPIOS:
                 open_file = open(gpio)
                 self.gpio_fds.append(open_file)
@@ -541,27 +600,30 @@ class SerialHandler:
             for e in exceptional:
                 if e == self.gpio_fds[0]:
                     if int(vals[0]) == 1:
+                        print self.gpio_fds[0]
                         self.handle_locks(0)
 
                 elif e == self.gpio_fds[1]:
                     if int(vals[1]) == 1:
+                        print self.gpio_fds[0]
                         self.handle_locks(1)
 
                 elif e == self.gpio_fds[2]:
                     if int(vals[2]) == 1:
+                        print self.gpio_fds[0]
                         self.handle_locks(2)
 
                 elif e == self.gpio_fds[3]:
                     if int(vals[3]) == 1:
+                        print self.gpio_fds[0]
                         self.handle_locks(3)
 
             vals = []
             self.gpio_fds = []
 
 
-if __name__ == "__main__":
 
-    # TODO: Make this its own CLI and create global for READY variable that gets checked in startup_checks
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Provide port and host for TCP server')
     parser.add_argument('--h', '--HOST', default='0.0.0.0', help='Host ipv4 address (default 0.0.0.0)')
     parser.add_argument('--p', '--PORT', default=65000, help='Port (default 65000)')
