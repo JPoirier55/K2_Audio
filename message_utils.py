@@ -13,7 +13,6 @@ date           programmer         modification
 1/25/17          JDP                original
 """
 from copy import deepcopy
-import status_utils
 from button_led_map import *
 from command_map import *
 
@@ -96,8 +95,12 @@ def allocate_micro_cmds(command):
 
     cid_array = command['component_id']
     for cid in cid_array:
-        micro_num = map_arrays['micro'][(int(cid))-1]
-        micro_commands['micro_' + str(micro_num)].append(cid)
+        try:
+            if int(cid) < len(map_arrays['micro']):
+                micro_num = map_arrays['micro'][(int(cid))-1]
+                micro_commands['micro_' + str(micro_num)].append(cid)
+        except:
+            continue
     return micro_commands
 
 
@@ -182,6 +185,9 @@ def translate_led_array(command):
     @return: Dict with uart ports and strings for micro
     commands
     """
+    # TODO: send the command to send the LED array afterwards
+    response = {}
+    response_ids = []
     command_array = {}
     logical_ids = []
     value = int(command['value'])
@@ -190,32 +196,51 @@ def translate_led_array(command):
     checksum = '0'
 
     for id in command['component_id']:
-        logical_ids.append(translate_logical_id(id))
+        try:
+            if int(id) < len(map_arrays['micro']):
+                logical_ids.append(translate_logical_id(id))
+                response_ids.append(id)
+        except:
+            continue
 
     cid_arrays = allocate_micro_cmds(command)
 
     for micro_num, cid_array in cid_arrays.iteritems():
-        micro_cmd = "{0:0{4}X}{1}{2:0{4}X}{3:0{4}X}".format(start_char, length, command_byte, value, 2)
-        uart_port = UART_PORTS[int(micro_num[-1])]
 
-        if len(cid_array) > 16:
-            id_arrays = split_id_array(cid_array)
-            for id_array in id_arrays:
-                for id in id_array:
+        if len(cid_array) > 0:
+            micro_cmd = "{0:0{4}X}{1}{2:0{4}X}{3:0{4}X}".format(start_char, length, command_byte, value, 2)
+            uart_port = UART_PORTS[int(micro_num[-1])]
+            command_array[uart_port] = []
+
+            if len(cid_array) > 16:
+                id_arrays = split_id_array(cid_array)
+                for id_array in id_arrays:
+                    for id in id_array:
+                        micro_cmd += '{0:0{1}X}'.format(int(id), 2)
+                    micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+                    micro_cmd = finalize_cmd(micro_cmd)
+                    command_array[uart_port].append(micro_cmd)
+                    micro_cmd = "{0:0{4}X}{1}{2:0{4}X}{3:0{4}X}".format(start_char, length, command_byte, value, 2)
+
+            elif len(cid_array) == 1:
+                micro_cmd += '{0:0{1}X}'.format(int(cid_array[0]), 2)
+                micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+                micro_cmd = finalize_cmd(micro_cmd)
+                command_array[uart_port].append(micro_cmd)
+            else:
+                for id in cid_array:
                     micro_cmd += '{0:0{1}X}'.format(int(id), 2)
-        elif len(cid_array) <= 0:
-            pass
-        elif len(cid_array) == 1:
-            micro_cmd += '{0:0{1}X}'.format(int(cid_array[0]), 2)
-        else:
-            for id in cid_array:
-                micro_cmd += '{0:0{1}X}'.format(int(id), 2)
+                micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+                micro_cmd = finalize_cmd(micro_cmd)
+                command_array[uart_port].append(micro_cmd)
 
-        micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
-        micro_cmd = finalize_cmd(micro_cmd)
-        command_array[uart_port] = (micro_cmd)
+    response['category'] = command['category']
+    response['action'] = '='
+    response['component_id'] = response_ids
+    response['component'] = command['component']
+    response['value'] = command['value']
 
-    return command_array, "ARRAY"
+    return response, command_array, "ARRAY"
 
 
 def translate_all_led(command):
@@ -243,7 +268,7 @@ def translate_cfg_cmd(dsp_command):
     more condensed version to be sent to the micro
     as a possible set of bytes/ascii chars. Will be
     updated for new protocol between bb and micros
-    @param command: DSP json command
+    @param dsp_command: DSP json command
     @return: new micro command
     """
 
@@ -333,7 +358,9 @@ def translate_single_led(command):
     """
     parameter = int(command['component_id'])
     value = int(command['value'])
-    uart_port = UART_PORTS[map_arrays['micro'][int(parameter)]]
+    if parameter > len(map_arrays['micro']):
+        return error_response(2)
+    uart_port = UART_PORTS[map_arrays['micro'][parameter-1]]
     length = '0'
     checksum = '0'
     command_byte = command_dict['set_led_button']
@@ -352,7 +379,8 @@ def handle_unsolicited(micro_command, uart_port):
     from the micro. First checks checksum
     then builds a tcp command to be sent
     to DSP
-    @param micro_command: 
+    @param micro_command:
+    @param uart_port: 
     @return: TCP command for dsp 
     """
     for b in micro_command:
@@ -536,7 +564,7 @@ class MessageHandler:
         cid = command['component_id']
 
         if comp == 'LED' and isinstance(cid, list):
-            micro_command, uart_port = translate_led_array(command)
+            response, micro_command, uart_port = translate_led_array(command)
             return response, (micro_command, uart_port)
         elif comp == 'LED' and cid == 'ALL':
             micro_command, uart_port = translate_all_led(command)
