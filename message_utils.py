@@ -465,8 +465,7 @@ def check_fw_or_status(request):
         command_byte = command_dict['get_panel_status']
         micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte,
                                                                  checksum, stop_char, 2)
-
-    finalize_cmd(micro_cmd)
+    micro_cmd = finalize_cmd(micro_cmd)
     return micro_cmd, 'ALL'
 
 

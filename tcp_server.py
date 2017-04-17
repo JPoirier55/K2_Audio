@@ -139,14 +139,15 @@ class StartUpTester:
         @return: None
         """
         for led in map_arrays['panel']:
-            ser = self.sers[map_arrays['micro'][led-1]]
-            cmd = 'E8024001{0:0{1}X}00EE'.format(map_arrays['logical'][led-1], 2)
-            chk = self.calculate_checksum(bytearray.fromhex(cmd))
-            cmd = cmd[:-4] + str(hex(chk)[2:]) + cmd[-2:]
-            cmd = bytearray.fromhex(cmd)
+            if not READY:
+                ser = self.sers[map_arrays['micro'][led-1]]
+                cmd = 'E8024001{0:0{1}X}00EE'.format(map_arrays['logical'][led-1], 2)
+                chk = self.calculate_checksum(bytearray.fromhex(cmd))
+                cmd = cmd[:-4] + str(hex(chk)[2:]) + cmd[-2:]
+                cmd = bytearray.fromhex(cmd)
 
-            ser.write(cmd)
-            time.sleep(.01)
+                ser.write(cmd)
+                time.sleep(.01)
 
 
 def startup_worker():
@@ -242,8 +243,9 @@ class SerialSendHandler:
 
                         self.ser.write(command)
                         ba, checksum = read_serial_generic(self.ser)
-
+                        # TODO: Check command for response if data should be returned, ie status
                         if ba == MICRO_ACK:
+                            print uart_port, " Ack recv"
                             ack = True
 
                     finally:
@@ -294,6 +296,7 @@ class DataHandler:
                     single_command = json.dumps(single_uart_command).strip('"')
                     if self.serial_handler.serial_handle(single_command, uart_port):
                         ack_num += 1
+                        print uart_port, " Ack recv"
 
         if ack_num == count:
             return True
@@ -313,17 +316,14 @@ class DataHandler:
         else:
             return False
 
-    def allocate(self, incoming_data):
+    def allocate(self, json_data):
         """
         Allocate incoming data to whatever micro command 
         it is supposed to be 
         @param incoming_data: 
         @return: None
         """
-        try:
-            json_data = json.loads(incoming_data.replace(",}", "}"), encoding='utf8')
-        except Exception as e:
-            return error_response(0)[0]
+
         response = ""
         try:
             if all(key in json_data for key in
@@ -376,15 +376,12 @@ def tcp_handler(sock):
     """
     inputs = [sock]
     outputs = []
-    message_queues = {}
     data_handler = DataHandler()
     global READY
     client_address = ''
 
     try:
-        # TODO: Strip this down into something a little more elegant
         while inputs:
-
             if len(inputs) > 5:
                 for t in range(1, len(inputs)-1):
                     inputs[t].close()
@@ -398,25 +395,27 @@ def tcp_handler(sock):
                         print 'Connect', client_address
                     connection.setblocking(0)
                     inputs.append(connection)
-
-                    message_queues[connection] = Queue.Queue()
                 else:
                     data = s.recv(1024)
-
                     if data:
+                        try:
+                            json_data = json.loads(data.replace(",}", "}"), encoding='utf8')
+                        except Exception as e:
+                            return error_response(0)[0]
+
+                        if json_data['category'] == 'STS' and json_data['component'] == 'SYS':
+                            READY = True
+
                         if DEBUG:
                             print 'Data:', data
-                        # add to queue if response
-                        # TODO: check for status message as first boot up, then set ready=true
-                        READY = True
-                        message_queues[s].put(data)
-                        response = data_handler.allocate(data)
-                        if DEBUG:
-                            print 'return response to ', client_address, '  ', response
-                        s.sendall(json.dumps(response))
 
-                        if s not in outputs:
-                            outputs.append(s)
+                        if READY:
+                            response = data_handler.allocate(json_data)
+                            if DEBUG:
+                                print 'return response to ', client_address, '  ', response
+                            s.sendall(json.dumps(response))
+                            if s not in outputs:
+                                outputs.append(s)
                     else:
                         if DEBUG:
                             print 'Closing:', s
@@ -424,8 +423,6 @@ def tcp_handler(sock):
                             outputs.remove(s)
                         inputs.remove(s)
                         s.close()
-                        # remove from queue
-                        del message_queues[s]
 
     except socket.error, e:
         logging.exception("{0} - Failed to read data from socket".format(datetime.datetime.now()))
@@ -531,17 +528,15 @@ class SerialHandler:
                 try:
                     if DEBUG:
                         print 'Serial lock acquired'
-                    print 'PORT INDEX', port_index
+                        print 'PORT INDEX', port_index
+                        print CTS_GPIOS[port_index]
                     self.ser = self.sers[port_index]
                     self.ser.flushInput()
-                    # GPIO.output("USR{0}".format(port_index), GPIO.HIGH)
-                    print CTS_GPIOS[port_index]
                     GPIO.output(CTS_GPIOS[port_index], GPIO.HIGH)
                     self.handle_message()
 
                 finally:
                     LOCKS[self.uart_ports[port_index]].release()
-                    # GPIO.output("USR{0}".format(port_index), GPIO.LOW)
                     GPIO.output(CTS_GPIOS[port_index], GPIO.LOW)
                     if DEBUG:
                         print 'Serial lock released'
@@ -624,9 +619,9 @@ if __name__ == "__main__":
     serial_thread.daemon = True
     serial_thread.start()
 
-    # startup_thread = threading.Thread(target=startup_worker)
-    # startup_thread.daemon = True
-    # startup_thread.start()
+    startup_thread = threading.Thread(target=startup_worker)
+    startup_thread.daemon = True
+    startup_thread.start()
 
     server_address = (HOST, int(PORT))
     print 'Starting server on:', server_address
