@@ -1,0 +1,302 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module tcp_server</title>
+<meta charset="utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>tcp_server</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/debian/K2_Audio/tcp_server.py">/home/debian/K2_Audio/tcp_server.py</a></font></td></tr></table>
+    <p><tt>FILE:&nbsp;&nbsp;&nbsp;tcp_server.py<br>
+DESCRIPTION:&nbsp;TCP&nbsp;server&nbsp;module&nbsp;which&nbsp;runs&nbsp;on&nbsp;boot&nbsp;and&nbsp;handles&nbsp;incoming<br>
+messages&nbsp;from&nbsp;the&nbsp;DSP&nbsp;through&nbsp;TCP&nbsp;connection.<br>
+&nbsp;<br>
+Can&nbsp;be&nbsp;run&nbsp;through&nbsp;the&nbsp;command&nbsp;line&nbsp;with&nbsp;arguments&nbsp;for&nbsp;HOST&nbsp;(--h)&nbsp;and&nbsp;PORT&nbsp;(--p)<br>
+to&nbsp;start&nbsp;the&nbsp;server&nbsp;running&nbsp;locally&nbsp;or&nbsp;through&nbsp;dev&nbsp;env.<br>
+Currently&nbsp;only&nbsp;supports&nbsp;IPv4<br>
+&nbsp;<br>
+WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="Adafruit_BBIO.GPIO.html">Adafruit_BBIO.GPIO</a><br>
+<a href="argparse.html">argparse</a><br>
+<a href="datetime.html">datetime</a><br>
+</td><td width="25%" valign=top><a href="json.html">json</a><br>
+<a href="logging.html">logging</a><br>
+<a href="os.html">os</a><br>
+</td><td width="25%" valign=top><a href="select.html">select</a><br>
+<a href="serial.html">serial</a><br>
+<a href="socket.html">socket</a><br>
+</td><td width="25%" valign=top><a href="threading.html">threading</a><br>
+<a href="time.html">time</a><br>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="tcp_server.html#DataHandler">DataHandler</a>
+</font></dt><dt><font face="helvetica, arial"><a href="tcp_server.html#SerialReceiveHandler">SerialReceiveHandler</a>
+</font></dt><dt><font face="helvetica, arial"><a href="tcp_server.html#SerialSendHandler">SerialSendHandler</a>
+</font></dt><dt><font face="helvetica, arial"><a href="tcp_server.html#StartUpTester">StartUpTester</a>
+</font></dt></dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="DataHandler">class <strong>DataHandler</strong></a></font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Handles&nbsp;all&nbsp;outgoing&nbsp;data&nbsp;for&nbsp;micro&nbsp;commands,&nbsp;and&nbsp;does&nbsp;checks&nbsp;for&nbsp;responses&nbsp;from&nbsp;micros&nbsp;as&nbsp;ACKs<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="DataHandler-__init__"><strong>__init__</strong></a>(self)</dt><dd><tt>Init&nbsp;serial&nbsp;handler</tt></dd></dl>
+
+<dl><dt><a name="DataHandler-allocate"><strong>allocate</strong></a>(self, json_data)</dt><dd><tt>Allocate&nbsp;incoming&nbsp;data&nbsp;to&nbsp;corresponding&nbsp;function<br>
+for&nbsp;further&nbsp;processing&nbsp;and&nbsp;micro&nbsp;messaging.<br>
+&nbsp;<br>
+Options&nbsp;include&nbsp;commands&nbsp;for:<br>
+&nbsp;<br>
+ERROR&nbsp;-&nbsp;Some&nbsp;error&nbsp;occurred&nbsp;while&nbsp;processing&nbsp;or&nbsp;from&nbsp;micro<br>
+ALL&nbsp;-&nbsp;Command&nbsp;will&nbsp;be&nbsp;sent&nbsp;to&nbsp;all&nbsp;micros,&nbsp;and&nbsp;expect&nbsp;4&nbsp;acks<br>
+ARRAY&nbsp;-&nbsp;Command&nbsp;will&nbsp;be&nbsp;sent&nbsp;to&nbsp;corresponding&nbsp;micros&nbsp;<br>
+Other&nbsp;-&nbsp;Command&nbsp;falls&nbsp;into&nbsp;other&nbsp;category,&nbsp;including&nbsp;single&nbsp;LED/SW&nbsp;commands<br>
+&nbsp;<br>
+@param&nbsp;json_data:&nbsp;Incoming&nbsp;json&nbsp;data&nbsp;from&nbsp;TCP&nbsp;handler<br>
+@return:&nbsp;Response&nbsp;to&nbsp;be&nbsp;sent&nbsp;back&nbsp;through&nbsp;TCP&nbsp;to&nbsp;dsp</tt></dd></dl>
+
+<dl><dt><a name="DataHandler-handle_all_msg"><strong>handle_all_msg</strong></a>(self, uart_command)</dt><dd><tt>Handle&nbsp;messages&nbsp;that&nbsp;go&nbsp;to&nbsp;all&nbsp;micros/ports<br>
+Checks&nbsp;to&nbsp;see&nbsp;if&nbsp;all&nbsp;ACKs&nbsp;are&nbsp;received&nbsp;<br>
+&nbsp;<br>
+@param&nbsp;uart_command:&nbsp;incoming&nbsp;command&nbsp;to&nbsp;be&nbsp;sent&nbsp;to&nbsp;all&nbsp;micros<br>
+@return:&nbsp;True&nbsp;-&nbsp;ACK,&nbsp;False&nbsp;-&nbsp;NACK</tt></dd></dl>
+
+<dl><dt><a name="DataHandler-handle_arr_msg"><strong>handle_arr_msg</strong></a>(self, uart_command)</dt><dd><tt>Handle&nbsp;messages&nbsp;that&nbsp;come&nbsp;in&nbsp;as&nbsp;arrays<br>
+and&nbsp;send&nbsp;them&nbsp;to&nbsp;corresponding&nbsp;micro/port&nbsp;<br>
+for&nbsp;each&nbsp;message<br>
+Checks&nbsp;to&nbsp;see&nbsp;if&nbsp;all&nbsp;ACKs&nbsp;are&nbsp;received&nbsp;with<br>
+count&nbsp;vs&nbsp;ack_num&nbsp;<br>
+&nbsp;<br>
+@param&nbsp;uart_command:&nbsp;Incoming&nbsp;dict&nbsp;with&nbsp;{'port':'command'}&nbsp;format&nbsp;<br>
+@return:&nbsp;True&nbsp;-&nbsp;ACK,&nbsp;False&nbsp;-&nbsp;NACK</tt></dd></dl>
+
+<dl><dt><a name="DataHandler-handle_other_msg"><strong>handle_other_msg</strong></a>(self, uart_command, uart_port)</dt><dd><tt>Handle&nbsp;all&nbsp;other&nbsp;messages&nbsp;such&nbsp;as&nbsp;single&nbsp;leds,<br>
+firmware&nbsp;or&nbsp;status&nbsp;messages<br>
+&nbsp;<br>
+@param&nbsp;uart_command:&nbsp;Incoming&nbsp;uart&nbsp;command<br>
+@param&nbsp;uart_port:&nbsp;Corresponding&nbsp;port&nbsp;for&nbsp;command<br>
+@return:&nbsp;True&nbsp;-&nbsp;ACK,&nbsp;False&nbsp;-&nbsp;NACK</tt></dd></dl>
+
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="SerialReceiveHandler">class <strong>SerialReceiveHandler</strong></a></font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Handles&nbsp;all&nbsp;incoming&nbsp;unsolicited&nbsp;messages&nbsp;from&nbsp;UARTS,&nbsp;controls&nbsp;RTS/CTS&nbsp;GPIOs&nbsp;to&nbsp;handle&nbsp;unsolicited<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="SerialReceiveHandler-__init__"><strong>__init__</strong></a>(self)</dt><dd><tt>Init&nbsp;all&nbsp;uart&nbsp;ports&nbsp;to&nbsp;listen&nbsp;on,&nbsp;init&nbsp;TCP&nbsp;client&nbsp;for&nbsp;connecting&nbsp;to&nbsp;DSP&nbsp;server</tt></dd></dl>
+
+<dl><dt><a name="SerialReceiveHandler-calculate_checksum"><strong>calculate_checksum</strong></a>(self, micro_cmd)</dt><dd><tt>Class&nbsp;method&nbsp;for&nbsp;handling&nbsp;checksum&nbsp;<br>
+calculation&nbsp;for&nbsp;micro&nbsp;commands<br>
+@param&nbsp;micro_cmd:&nbsp;incoming&nbsp;command<br>
+@return:&nbsp;sum&nbsp;of&nbsp;the&nbsp;checksum&nbsp;mod&nbsp;0x100&nbsp;<br>
+to&nbsp;keep&nbsp;it&nbsp;within&nbsp;a&nbsp;byte</tt></dd></dl>
+
+<dl><dt><a name="SerialReceiveHandler-handle_locks"><strong>handle_locks</strong></a>(self, port_index)</dt><dd><tt>Checks&nbsp;and&nbsp;acquires&nbsp;locks&nbsp;for&nbsp;whatever&nbsp;port&nbsp;<br>
+the&nbsp;incoming&nbsp;message&nbsp;will&nbsp;come&nbsp;in&nbsp;on.&nbsp;The&nbsp;<br>
+RTS&nbsp;which&nbsp;has&nbsp;been&nbsp;flagged&nbsp;will&nbsp;be&nbsp;the&nbsp;port<br>
+index&nbsp;and&nbsp;will&nbsp;follow&nbsp;through&nbsp;to&nbsp;set&nbsp;correct<br>
+serial&nbsp;object&nbsp;and&nbsp;CTS&nbsp;flag<br>
+@param&nbsp;port_index:&nbsp;incoming&nbsp;RTS&nbsp;index<br>
+@return:&nbsp;None</tt></dd></dl>
+
+<dl><dt><a name="SerialReceiveHandler-handle_message"><strong>handle_message</strong></a>(self)</dt><dd><tt>Reads&nbsp;message&nbsp;and&nbsp;handles&nbsp;checking&nbsp;for<br>
+correct&nbsp;checksum&nbsp;and&nbsp;returns&nbsp;an&nbsp;error<br>
+or&nbsp;an&nbsp;acknowledgement&nbsp;depending&nbsp;on&nbsp;if&nbsp;<br>
+the&nbsp;incoming&nbsp;message&nbsp;was&nbsp;good.&nbsp;Sends&nbsp;out&nbsp;tcp<br>
+message&nbsp;if&nbsp;okay,&nbsp;error&nbsp;back&nbsp;to&nbsp;micro&nbsp;if&nbsp;not.<br>
+@return:&nbsp;None</tt></dd></dl>
+
+<dl><dt><a name="SerialReceiveHandler-send_tcp"><strong>send_tcp</strong></a>(self, unsol_msg, uart_port)</dt><dd><tt>Send&nbsp;TCP&nbsp;through&nbsp;to&nbsp;DSP&nbsp;with&nbsp;whatever<br>
+the&nbsp;micro&nbsp;command&nbsp;translates&nbsp;to.&nbsp;This&nbsp;is&nbsp;<br>
+generally&nbsp;an&nbsp;unsolicited&nbsp;message<br>
+@param&nbsp;unsol_msg:&nbsp;incoming&nbsp;message&nbsp;from&nbsp;micro<br>
+@param&nbsp;uart_port:&nbsp;port&nbsp;being&nbsp;read&nbsp;from<br>
+@return:&nbsp;True&nbsp;if&nbsp;sent,&nbsp;False&nbsp;if&nbsp;not</tt></dd></dl>
+
+<dl><dt><a name="SerialReceiveHandler-serial_worker"><strong>serial_worker</strong></a>(self)</dt><dd><tt>Serial&nbsp;thread&nbsp;which&nbsp;listens&nbsp;for&nbsp;incoming<br>
+unsolicted&nbsp;messages.&nbsp;Depending&nbsp;on&nbsp;the&nbsp;incoming<br>
+gpio&nbsp;that&nbsp;is&nbsp;read,&nbsp;the&nbsp;file&nbsp;descriptor&nbsp;will&nbsp;<br>
+trigger&nbsp;and&nbsp;set&nbsp;the&nbsp;port&nbsp;index&nbsp;used&nbsp;in&nbsp;<br>
+handle_locks.&nbsp;The&nbsp;select&nbsp;exceptional&nbsp;statement<br>
+won't&nbsp;get&nbsp;called&nbsp;until&nbsp;one&nbsp;of&nbsp;the&nbsp;file&nbsp;descriptors<br>
+has&nbsp;changed,&nbsp;aka&nbsp;RTS&nbsp;has&nbsp;been&nbsp;flagged.<br>
+@return:&nbsp;None</tt></dd></dl>
+
+<dl><dt><a name="SerialReceiveHandler-setup"><strong>setup</strong></a>(self)</dt><dd><tt>Create&nbsp;new&nbsp;serial&nbsp;objects&nbsp;to&nbsp;be&nbsp;used&nbsp;to<br>
+read&nbsp;incoming&nbsp;serial&nbsp;messages,&nbsp;append<br>
+them&nbsp;to&nbsp;an&nbsp;array<br>
+@return:&nbsp;None</tt></dd></dl>
+
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="SerialSendHandler">class <strong>SerialSendHandler</strong></a></font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Handles&nbsp;all&nbsp;serial&nbsp;connections,&nbsp;controls&nbsp;serial&nbsp;locks&nbsp;for&nbsp;each&nbsp;UART&nbsp;port<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="SerialSendHandler-__init__"><strong>__init__</strong></a>(self, baudrate<font color="#909090">=115200</font>, timeout<font color="#909090">=None</font>)</dt><dd><tt>Init&nbsp;baudrate&nbsp;and&nbsp;timeout&nbsp;for&nbsp;serial<br>
+@param&nbsp;baudrate:&nbsp;baudrate,&nbsp;default&nbsp;115200<br>
+@param&nbsp;timeout:&nbsp;timeout,&nbsp;default&nbsp;None</tt></dd></dl>
+
+<dl><dt><a name="SerialSendHandler-serial_handle"><strong>serial_handle</strong></a>(self, uart_command, uart_port)</dt><dd><tt>Generic&nbsp;method&nbsp;which&nbsp;handles&nbsp;the&nbsp;serial&nbsp;locking<br>
+and&nbsp;conversion&nbsp;to&nbsp;be&nbsp;sent,&nbsp;also&nbsp;checks&nbsp;the&nbsp;recv<br>
+ack&nbsp;from&nbsp;the&nbsp;micro&nbsp;to&nbsp;verify&nbsp;its&nbsp;correct<br>
+@param&nbsp;uart_command:&nbsp;command&nbsp;from&nbsp;micro<br>
+@param&nbsp;uart_port:&nbsp;port&nbsp;command&nbsp;comes&nbsp;on<br>
+@return:</tt></dd></dl>
+
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="StartUpTester">class <strong>StartUpTester</strong></a></font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Sequence&nbsp;that&nbsp;is&nbsp;initialized&nbsp;when&nbsp;server&nbsp;starts.&nbsp;Runs&nbsp;as&nbsp;follows:<br>
+&nbsp;<br>
+1.&nbsp;Check&nbsp;all&nbsp;uart&nbsp;ports&nbsp;for&nbsp;acks&nbsp;back<br>
+2.&nbsp;Light&nbsp;up&nbsp;all&nbsp;LEDS&nbsp;to&nbsp;be&nbsp;checked&nbsp;for&nbsp;broken&nbsp;ones,&nbsp;wait&nbsp;5&nbsp;seconds<br>
+3.&nbsp;Shut&nbsp;all&nbsp;LEDs&nbsp;off<br>
+4.&nbsp;Start&nbsp;carousel&nbsp;of&nbsp;LEDs&nbsp;until&nbsp;DSP&nbsp;sends&nbsp;status&nbsp;command<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="StartUpTester-__init__"><strong>__init__</strong></a>(self)</dt><dd><tt>Init&nbsp;all&nbsp;serial&nbsp;ports&nbsp;and&nbsp;setup&nbsp;serial&nbsp;connections</tt></dd></dl>
+
+<dl><dt><a name="StartUpTester-calculate_checksum"><strong>calculate_checksum</strong></a>(self, micro_cmd)</dt><dd><tt>Calculate&nbsp;checksum&nbsp;from&nbsp;micro_cmd&nbsp;bytearray<br>
+object.&nbsp;Same&nbsp;method&nbsp;as&nbsp;in&nbsp;message_utils,<br>
+but&nbsp;used&nbsp;here&nbsp;as&nbsp;well.<br>
+@param&nbsp;micro_cmd:&nbsp;incoming&nbsp;micro&nbsp;command&nbsp;bytearray<br>
+@return:&nbsp;checksum&nbsp;integer</tt></dd></dl>
+
+<dl><dt><a name="StartUpTester-read_serial"><strong>read_serial</strong></a>(self, ser)</dt><dd><tt>Method&nbsp;to&nbsp;read&nbsp;incoming&nbsp;message&nbsp;from<br>
+micro&nbsp;after&nbsp;sending&nbsp;message<br>
+@param&nbsp;ser:&nbsp;serial&nbsp;object<br>
+@return:&nbsp;1&nbsp;-&nbsp;checksum&nbsp;correct&nbsp;and&nbsp;ack&nbsp;received<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2&nbsp;-&nbsp;either&nbsp;checksum&nbsp;or&nbsp;ack&nbsp;not&nbsp;correct/received</tt></dd></dl>
+
+<dl><dt><a name="StartUpTester-run_blinky_sequence"><strong>run_blinky_sequence</strong></a>(self)</dt><dd><tt>Iterate&nbsp;through&nbsp;LEDs&nbsp;on&nbsp;control&nbsp;board<br>
+to&nbsp;turn&nbsp;on&nbsp;in&nbsp;the&nbsp;order&nbsp;1-2-3-...202-203<br>
+Each&nbsp;one&nbsp;has&nbsp;a&nbsp;wait&nbsp;of&nbsp;.1&nbsp;seconds&nbsp;between<br>
+turning&nbsp;on<br>
+@return:&nbsp;None</tt></dd></dl>
+
+<dl><dt><a name="StartUpTester-run_startup"><strong>run_startup</strong></a>(self)</dt><dd><tt>Run&nbsp;startup&nbsp;sequence&nbsp;of&nbsp;commands&nbsp;to<br>
+check&nbsp;all&nbsp;four&nbsp;micros,&nbsp;then&nbsp;have&nbsp;all<br>
+LEDs&nbsp;come&nbsp;on,&nbsp;wait&nbsp;5&nbsp;seconds,&nbsp;then&nbsp;<br>
+turn&nbsp;off.<br>
+@return:&nbsp;True&nbsp;-&nbsp;If&nbsp;everything&nbsp;worked<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;False&nbsp;-&nbsp;If&nbsp;an&nbsp;error&nbsp;occurred</tt></dd></dl>
+
+<dl><dt><a name="StartUpTester-send_command"><strong>send_command</strong></a>(self, micro_cmd)</dt><dd><tt>Send&nbsp;micro&nbsp;command&nbsp;for&nbsp;initial&nbsp;startup<br>
+sequence,&nbsp;and&nbsp;read&nbsp;incoming&nbsp;ack<br>
+@param&nbsp;micro_cmd:&nbsp;outgoing&nbsp;micro&nbsp;command<br>
+@return:&nbsp;True&nbsp;-&nbsp;If&nbsp;all&nbsp;four&nbsp;acks&nbsp;have&nbsp;been&nbsp;received<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;False&nbsp;-&nbsp;If&nbsp;less&nbsp;than&nbsp;four&nbsp;received</tt></dd></dl>
+
+<dl><dt><a name="StartUpTester-setup_sers"><strong>setup_sers</strong></a>(self)</dt><dd><tt>Create&nbsp;list&nbsp;of&nbsp;serial&nbsp;file&nbsp;descriptors<br>
+needed&nbsp;for&nbsp;running&nbsp;the&nbsp;initial&nbsp;start&nbsp;sequence<br>
+@return:&nbsp;None</tt></dd></dl>
+
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-Lock"><strong>Lock</strong></a> = allocate_lock(...)</dt><dd><tt>allocate_lock()&nbsp;-&gt;&nbsp;lock&nbsp;object<br>
+(allocate()&nbsp;is&nbsp;an&nbsp;obsolete&nbsp;synonym)<br>
+&nbsp;<br>
+Create&nbsp;a&nbsp;new&nbsp;lock&nbsp;object.&nbsp;&nbsp;See&nbsp;help(LockType)&nbsp;for&nbsp;information&nbsp;about&nbsp;locks.</tt></dd></dl>
+ <dl><dt><a name="-check_logfile_size"><strong>check_logfile_size</strong></a>()</dt><dd><tt>Clear&nbsp;logfile&nbsp;if&nbsp;the&nbsp;size&nbsp;is&nbsp;greater&nbsp;than<br>
+1MB<br>
+This&nbsp;assumes&nbsp;the&nbsp;log&nbsp;file&nbsp;will&nbsp;be&nbsp;checked,&nbsp;as<br>
+well&nbsp;as&nbsp;used.&nbsp;This&nbsp;could&nbsp;be&nbsp;used&nbsp;for&nbsp;debugging&nbsp;<br>
+during&nbsp;development&nbsp;or&nbsp;triage&nbsp;during&nbsp;use.<br>
+&nbsp;<br>
+@return:&nbsp;None</tt></dd></dl>
+ <dl><dt><a name="-read_serial_generic"><strong>read_serial_generic</strong></a>(ser)</dt><dd><tt>Method&nbsp;to&nbsp;read&nbsp;any&nbsp;incoming&nbsp;message&nbsp;that<br>
+falls&nbsp;within&nbsp;the&nbsp;format&nbsp;of&nbsp;our&nbsp;protocol&nbsp;between<br>
+Beaglebone&nbsp;and&nbsp;micro.&nbsp;Creates&nbsp;a&nbsp;bytearray&nbsp;for&nbsp;command.<br>
+Example&nbsp;message:&nbsp;E8021005FFEE<br>
+See&nbsp;command_map.py&nbsp;for&nbsp;all&nbsp;message<br>
+parameters&nbsp;and&nbsp;definitions<br>
+@param&nbsp;ser:&nbsp;Serial&nbsp;object&nbsp;being&nbsp;read&nbsp;from<br>
+@return:&nbsp;Tuple&nbsp;of&nbsp;message&nbsp;in&nbsp;bytes,&nbsp;and&nbsp;checksum</tt></dd></dl>
+ <dl><dt><a name="-startup_worker"><strong>startup_worker</strong></a>()</dt><dd><tt>Thread&nbsp;which&nbsp;runs&nbsp;the&nbsp;startup&nbsp;sequence&nbsp;<br>
+until&nbsp;the&nbsp;READY&nbsp;global&nbsp;variable&nbsp;is&nbsp;False.<br>
+This&nbsp;sequence&nbsp;is&nbsp;essentially&nbsp;waiting&nbsp;for&nbsp;<br>
+the&nbsp;DSP&nbsp;to&nbsp;send&nbsp;a&nbsp;status&nbsp;update&nbsp;message,&nbsp;<br>
+when&nbsp;its&nbsp;time&nbsp;to&nbsp;reconnect.&nbsp;This&nbsp;thread<br>
+will&nbsp;run&nbsp;until&nbsp;that&nbsp;message&nbsp;is&nbsp;sent,&nbsp;and<br>
+will&nbsp;be&nbsp;killed&nbsp;when&nbsp;it&nbsp;is&nbsp;sent.<br>
+@return:&nbsp;None,&nbsp;thread&nbsp;closed</tt></dd></dl>
+ <dl><dt><a name="-tcp_handler"><strong>tcp_handler</strong></a>(sock)</dt><dd><tt>Main&nbsp;tcp&nbsp;handler&nbsp;which&nbsp;cycles&nbsp;through&nbsp;<br>
+readable&nbsp;socket&nbsp;file&nbsp;descriptors&nbsp;to&nbsp;check&nbsp;for&nbsp;<br>
+any&nbsp;incoming&nbsp;tcp&nbsp;packets.&nbsp;Allows&nbsp;only&nbsp;5&nbsp;<br>
+readable&nbsp;connections,&nbsp;then&nbsp;drops&nbsp;the&nbsp;ones<br>
+that&nbsp;aren't&nbsp;used.&nbsp;There&nbsp;is&nbsp;a&nbsp;single&nbsp;socket<br>
+as&nbsp;the&nbsp;main&nbsp;file&nbsp;descriptor,&nbsp;followed&nbsp;by&nbsp;<br>
+other&nbsp;connections,&nbsp;which&nbsp;get&nbsp;culled&nbsp;when<br>
+more&nbsp;than&nbsp;5.<br>
+&nbsp;<br>
+@param&nbsp;sock:&nbsp;main&nbsp;socket&nbsp;connection<br>
+@return:&nbsp;None</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>ALL_LEDS</strong> = 'E80240F80123EE'<br>
+<strong>ALL_LEDS_OFF</strong> = 'E80240F80022EE'<br>
+<strong>BB_ACK</strong> = bytearray(b'E8018069EE')<br>
+<strong>CTS_GPIOS</strong> = ['P8_45', 'P8_43', 'P8_41', 'P8_39']<br>
+<strong>DEBUG</strong> = False<br>
+<strong>DEV_UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2']<br>
+<strong>DSP_SERVER_IP</strong> = '192.168.255.88'<br>
+<strong>DSP_SERVER_PORT</strong> = 65000<br>
+<strong>GPIO_EDGE_FDS</strong> = ['/sys/class/gpio/gpio71/edge', '/sys/class/gpio/gpio73/edge', '/sys/class/gpio/gpio75/edge', '/sys/class/gpio/gpio77/edge']<br>
+<strong>LOCKS</strong> = {'/dev/ttyO1': &lt;thread.lock object&gt;, '/dev/ttyO2': &lt;thread.lock object&gt;, '/dev/ttyO4': &lt;thread.lock object&gt;, '/dev/ttyO5': &lt;thread.lock object&gt;}<br>
+<strong>MICRO_ACK</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
+<strong>MICRO_ERR</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
+<strong>MICRO_STATUS</strong> = 'E80231001BEE'<br>
+<strong>READY</strong> = False<br>
+<strong>RTS_GPIOS</strong> = ['/sys/class/gpio/gpio71/value', '/sys/class/gpio/gpio73/value', '/sys/class/gpio/gpio75/value', '/sys/class/gpio/gpio77/value']<br>
+<strong>UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']<br>
+<strong>map_arrays</strong> = {'logical': [4, 10, 16, 26, 32, 44, 46, 41, 35, 29, 13, 7, 1, 0, 6, 12, 28, 34, 40, 47, ...], 'micro': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, ...], 'panel': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...], 'pcb_conn': ['J2A', 'J2A', 'J2A', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2A', 'J2A', 'J2A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', ...]}<br>
+<strong>uart_lock1</strong> = &lt;thread.lock object&gt;<br>
+<strong>uart_lock2</strong> = &lt;thread.lock object&gt;<br>
+<strong>uart_lock4</strong> = &lt;thread.lock object&gt;<br>
+<strong>uart_lock5</strong> = &lt;thread.lock object&gt;<br>
+<strong>xLOCKS</strong> = {'/dev/ttyO1': &lt;thread.lock object&gt;}<br>
+<strong>xUART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']</td></tr></table>
+</body></html>

@@ -1,0 +1,194 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module message_utils</title>
+<meta charset="utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>message_utils</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/debian/K2_Audio/message_utils.py">/home/debian/K2_Audio/message_utils.py</a></font></td></tr></table>
+    <p><tt>FILE:&nbsp;&nbsp;&nbsp;message_utils.py<br>
+DESCRIPTION:&nbsp;Set&nbsp;of&nbsp;utility&nbsp;functions&nbsp;used&nbsp;for&nbsp;handling<br>
+and&nbsp;processing&nbsp;the&nbsp;messages&nbsp;that&nbsp;come&nbsp;from&nbsp;the&nbsp;DSP&nbsp;and&nbsp;require<br>
+manipulation&nbsp;before&nbsp;sending&nbsp;to&nbsp;micros.<br>
+&nbsp;<br>
+WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier<br>
+&nbsp;<br>
+MODIFICATION&nbsp;HISTORY:<br>
+&nbsp;<br>
+date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;programmer&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modification<br>
+-----------------------------------------------<br>
+1/25/17&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;JDP&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;original</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="message_utils.html#MessageHandler">MessageHandler</a>
+</font></dt></dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="MessageHandler">class <strong>MessageHandler</strong></a></font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="MessageHandler-__init__"><strong>__init__</strong></a>(self, json_request)</dt></dl>
+
+<dl><dt><a name="MessageHandler-process_command"><strong>process_command</strong></a>(self)</dt><dd><tt>Run&nbsp;the&nbsp;corresponding&nbsp;method&nbsp;based&nbsp;on&nbsp;the<br>
+category&nbsp;from&nbsp;the&nbsp;incoming&nbsp;JSON<br>
+@return:&nbsp;Response&nbsp;back&nbsp;to&nbsp;DSP</tt></dd></dl>
+
+<dl><dt><a name="MessageHandler-run_button_cmd"><strong>run_button_cmd</strong></a>(self)</dt><dd><tt>Run&nbsp;command&nbsp;with&nbsp;a&nbsp;single&nbsp;LED,&nbsp;Switch&nbsp;or&nbsp;list<br>
+of&nbsp;LEDs&nbsp;or&nbsp;Switches,&nbsp;or&nbsp;using&nbsp;ALL&nbsp;which<br>
+results&nbsp;in&nbsp;all&nbsp;LEDs&nbsp;turning&nbsp;on.&nbsp;This&nbsp;command&nbsp;will<br>
+split&nbsp;and&nbsp;allocate&nbsp;all&nbsp;incoming&nbsp;panel_ids&nbsp;into&nbsp;&lt;16<br>
+len&nbsp;arrays<br>
+@return:&nbsp;tuple&nbsp;of&nbsp;format:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tcp_response,&nbsp;(micro&nbsp;command,&nbsp;uart&nbsp;port)</tt></dd></dl>
+
+<dl><dt><a name="MessageHandler-run_config_cmd"><strong>run_config_cmd</strong></a>(self)</dt><dd><tt>Run&nbsp;the&nbsp;set&nbsp;of&nbsp;config&nbsp;commands,&nbsp;which<br>
+include&nbsp;firmware&nbsp;and&nbsp;status.<br>
+@return:&nbsp;FW&nbsp;or&nbsp;status&nbsp;response</tt></dd></dl>
+
+<dl><dt><a name="MessageHandler-run_encoder_cmd"><strong>run_encoder_cmd</strong></a>(self)</dt><dd><tt>Run&nbsp;the&nbsp;set&nbsp;of&nbsp;encoder&nbsp;commands,&nbsp;which<br>
+include&nbsp;changing&nbsp;the&nbsp;sensitivity&nbsp;as&nbsp;well<br>
+as&nbsp;the&nbsp;position&nbsp;of&nbsp;the&nbsp;encoder<br>
+@return:&nbsp;Encoder&nbsp;response&nbsp;to&nbsp;DSP</tt></dd></dl>
+
+<dl><dt><a name="MessageHandler-run_status_cmd"><strong>run_status_cmd</strong></a>(self)</dt><dd><tt>Run&nbsp;the&nbsp;status&nbsp;command&nbsp;on&nbsp;the&nbsp;system.<br>
+Runs&nbsp;status_utils&nbsp;check_status&nbsp;method&nbsp;which<br>
+checks&nbsp;memory&nbsp;availability&nbsp;as&nbsp;well&nbsp;as&nbsp;other<br>
+key&nbsp;system&nbsp;status&nbsp;reports<br>
+@return:&nbsp;Status&nbsp;command&nbsp;response&nbsp;to&nbsp;DSP</tt></dd></dl>
+
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-allocate_micro_cmds"><strong>allocate_micro_cmds</strong></a>(command)</dt><dd><tt>Creates&nbsp;arrays&nbsp;based&nbsp;on&nbsp;the&nbsp;micro&nbsp;that&nbsp;the&nbsp;command<br>
+should&nbsp;be&nbsp;sent&nbsp;to&nbsp;based&nbsp;on&nbsp;the&nbsp;incoming&nbsp;panel&nbsp;id.<br>
+For&nbsp;example,&nbsp;if&nbsp;the&nbsp;array&nbsp;has&nbsp;a&nbsp;set&nbsp;of&nbsp;numbers&nbsp;that<br>
+are&nbsp;all&nbsp;in&nbsp;different&nbsp;micros,&nbsp;this&nbsp;will&nbsp;allocated&nbsp;a<br>
+dict&nbsp;with&nbsp;the&nbsp;micro&nbsp;the&nbsp;message&nbsp;should&nbsp;be&nbsp;sent&nbsp;to.<br>
+This&nbsp;corresponds&nbsp;to&nbsp;the&nbsp;set&nbsp;of&nbsp;arrays&nbsp;in&nbsp;button_led_map.py<br>
+@param&nbsp;command:&nbsp;DSP&nbsp;cmd&nbsp;with&nbsp;array&nbsp;of&nbsp;panel_ids<br>
+@return:&nbsp;Dict&nbsp;with&nbsp;format:<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{'micro_0':&nbsp;[2,3,54,5],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;'micro_1':&nbsp;[6,7,8],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;'micro_2':&nbsp;[8],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;'micro_3':&nbsp;[]}</tt></dd></dl>
+ <dl><dt><a name="-array_to_string"><strong>array_to_string</strong></a>(array)</dt><dd><tt>Simple&nbsp;method&nbsp;to&nbsp;convert&nbsp;array<br>
+to&nbsp;string&nbsp;sep&nbsp;by&nbsp;whitespace<br>
+@param&nbsp;array:&nbsp;incoming&nbsp;array<br>
+@return:&nbsp;string&nbsp;of&nbsp;array</tt></dd></dl>
+ <dl><dt><a name="-calculate_checksum_bytes"><strong>calculate_checksum_bytes</strong></a>(micro_cmd)</dt><dd><tt>Calculates&nbsp;checksum&nbsp;of&nbsp;incoming<br>
+micro&nbsp;command&nbsp;that&nbsp;is&nbsp;from&nbsp;an&nbsp;<br>
+unsolicited&nbsp;command&nbsp;and&nbsp;is&nbsp;of&nbsp;the&nbsp;<br>
+form&nbsp;byte&nbsp;array<br>
+@param&nbsp;micro_cmd:&nbsp;<br>
+@return:&nbsp;checksum</tt></dd></dl>
+ <dl><dt><a name="-calculate_checksum_string"><strong>calculate_checksum_string</strong></a>(micro_cmd)</dt><dd><tt>Calculates&nbsp;checksum&nbsp;of&nbsp;an&nbsp;outgoing<br>
+micro&nbsp;command&nbsp;that&nbsp;is&nbsp;currently&nbsp;of<br>
+type&nbsp;string,&nbsp;uses&nbsp;only&nbsp;lease&nbsp;significant<br>
+byte&nbsp;for&nbsp;command<br>
+@param&nbsp;micro_cmd:&nbsp;<br>
+@return:&nbsp;checksum</tt></dd></dl>
+ <dl><dt><a name="-calculate_length"><strong>calculate_length</strong></a>(micro_cmd)</dt><dd><tt>Calculates&nbsp;length&nbsp;of&nbsp;micro&nbsp;commmand<br>
+by&nbsp;look&nbsp;at&nbsp;size&nbsp;after&nbsp;length,&nbsp;up&nbsp;to&nbsp;<br>
+checksum<br>
+@param&nbsp;micro_cmd:&nbsp;<br>
+@return:&nbsp;length&nbsp;of&nbsp;command</tt></dd></dl>
+ <dl><dt><a name="-check_fw_or_status"><strong>check_fw_or_status</strong></a>(request)</dt><dd><tt>Method&nbsp;to&nbsp;build&nbsp;micro&nbsp;command<br>
+to&nbsp;check&nbsp;both&nbsp;firmware&nbsp;and&nbsp;status<br>
+of&nbsp;the&nbsp;micros.<br>
+@param&nbsp;request:&nbsp;<br>
+@return:&nbsp;micro&nbsp;command,&nbsp;uart&nbsp;ports</tt></dd></dl>
+ <dl><dt><a name="-error_response"><strong>error_response</strong></a>(error_id)</dt><dd><tt>Error&nbsp;handler&nbsp;and&nbsp;builder<br>
+@param&nbsp;error_id:&nbsp;ID&nbsp;of&nbsp;error<br>
+@return:&nbsp;Error&nbsp;response&nbsp;in&nbsp;JSON&nbsp;format</tt></dd></dl>
+ <dl><dt><a name="-finalize_cmd"><strong>finalize_cmd</strong></a>(micro_cmd)</dt><dd><tt>Takes&nbsp;command&nbsp;that&nbsp;is&nbsp;outgoing&nbsp;to&nbsp;<br>
+micro&nbsp;and&nbsp;injects&nbsp;both&nbsp;checksum&nbsp;and<br>
+length&nbsp;in&nbsp;the&nbsp;final&nbsp;command&nbsp;to&nbsp;be&nbsp;<br>
+sent&nbsp;out<br>
+@param&nbsp;micro_cmd:&nbsp;<br>
+@return:&nbsp;final&nbsp;micro&nbsp;command</tt></dd></dl>
+ <dl><dt><a name="-handle_unsolicited"><strong>handle_unsolicited</strong></a>(micro_command, uart_port)</dt><dd><tt>Handles&nbsp;incoming&nbsp;unsolicited&nbsp;commands<br>
+from&nbsp;the&nbsp;micro.&nbsp;First&nbsp;checks&nbsp;checksum<br>
+then&nbsp;builds&nbsp;a&nbsp;tcp&nbsp;command&nbsp;to&nbsp;be&nbsp;sent<br>
+to&nbsp;DSP<br>
+@param&nbsp;micro_command:<br>
+@param&nbsp;uart_port:&nbsp;<br>
+@return:&nbsp;TCP&nbsp;command&nbsp;for&nbsp;dsp</tt></dd></dl>
+ <dl><dt><a name="-split_id_array"><strong>split_id_array</strong></a>(id_array)</dt><dd><tt>Yields&nbsp;set&nbsp;of&nbsp;size&nbsp;16&nbsp;arrays&nbsp;from&nbsp;individual<br>
+longer&nbsp;array<br>
+@param&nbsp;id_array:&nbsp;incoming&nbsp;&gt;16&nbsp;len&nbsp;array<br>
+@return:&nbsp;Generator&nbsp;of&nbsp;arrays</tt></dd></dl>
+ <dl><dt><a name="-translate_all_led"><strong>translate_all_led</strong></a>(command)</dt><dd><tt>Translate&nbsp;the&nbsp;command&nbsp;for&nbsp;all&nbsp;LEDs<br>
+into&nbsp;the&nbsp;proper&nbsp;micro&nbsp;command<br>
+@param&nbsp;command:&nbsp;incoming&nbsp;json&nbsp;command&nbsp;from&nbsp;DSP<br>
+@return:&nbsp;String&nbsp;micro&nbsp;command</tt></dd></dl>
+ <dl><dt><a name="-translate_cfg_cmd"><strong>translate_cfg_cmd</strong></a>(dsp_command)</dt><dd><tt>Translated&nbsp;incoming&nbsp;DSP&nbsp;json&nbsp;command&nbsp;to&nbsp;a<br>
+more&nbsp;condensed&nbsp;version&nbsp;to&nbsp;be&nbsp;sent&nbsp;to&nbsp;the&nbsp;micro<br>
+as&nbsp;a&nbsp;possible&nbsp;set&nbsp;of&nbsp;bytes/ascii&nbsp;chars.&nbsp;Will&nbsp;be<br>
+updated&nbsp;for&nbsp;new&nbsp;protocol&nbsp;between&nbsp;bb&nbsp;and&nbsp;micros<br>
+@param&nbsp;dsp_command:&nbsp;DSP&nbsp;json&nbsp;command<br>
+@return:&nbsp;new&nbsp;micro&nbsp;command</tt></dd></dl>
+ <dl><dt><a name="-translate_enc_cmd"><strong>translate_enc_cmd</strong></a>(command)</dt><dd><tt>Translated&nbsp;incoming&nbsp;DSP&nbsp;json&nbsp;command&nbsp;to&nbsp;a<br>
+more&nbsp;condensed&nbsp;version&nbsp;to&nbsp;be&nbsp;sent&nbsp;to&nbsp;the&nbsp;micro<br>
+as&nbsp;a&nbsp;possible&nbsp;set&nbsp;of&nbsp;bytes/ascii&nbsp;chars.&nbsp;<br>
+@param&nbsp;command:&nbsp;DSP&nbsp;json&nbsp;command<br>
+@return:&nbsp;new&nbsp;micro&nbsp;command</tt></dd></dl>
+ <dl><dt><a name="-translate_led_array"><strong>translate_led_array</strong></a>(command)</dt><dd><tt>Takes&nbsp;incoming&nbsp;command&nbsp;with&nbsp;an&nbsp;array&nbsp;of&nbsp;BTN&nbsp;IDs<br>
+and&nbsp;splits&nbsp;them&nbsp;into&nbsp;messages&nbsp;that&nbsp;contain&nbsp;a&nbsp;maximum<br>
+of&nbsp;16&nbsp;len&nbsp;BTN&nbsp;ids,&nbsp;and&nbsp;put&nbsp;them&nbsp;to&nbsp;the&nbsp;corresponding<br>
+micro&nbsp;based&nbsp;on&nbsp;the&nbsp;logical&nbsp;ids&nbsp;for&nbsp;each&nbsp;id.<br>
+@param&nbsp;command:&nbsp;DSP&nbsp;cmd&nbsp;with&nbsp;array&nbsp;of&nbsp;panel_ids<br>
+@return:&nbsp;Dict&nbsp;with&nbsp;uart&nbsp;ports&nbsp;and&nbsp;strings&nbsp;for&nbsp;micro<br>
+commands</tt></dd></dl>
+ <dl><dt><a name="-translate_logical_id"><strong>translate_logical_id</strong></a>(component_id)</dt><dd><tt>Simple&nbsp;method&nbsp;to&nbsp;translate&nbsp;between&nbsp;panel&nbsp;id&nbsp;and<br>
+logical&nbsp;ids&nbsp;for&nbsp;each&nbsp;micro.&nbsp;Each&nbsp;panel&nbsp;id<br>
+corresponds&nbsp;to&nbsp;a&nbsp;certain&nbsp;id&nbsp;within&nbsp;each&nbsp;set&nbsp;of<br>
+micros&nbsp;and&nbsp;is&nbsp;defined&nbsp;in&nbsp;map_arrays&nbsp;in&nbsp;button_led_map.py<br>
+@param&nbsp;component_id:&nbsp;Incoming&nbsp;id<br>
+@return:&nbsp;Logical&nbsp;ID</tt></dd></dl>
+ <dl><dt><a name="-translate_single_led"><strong>translate_single_led</strong></a>(command)</dt><dd><tt>Translate&nbsp;the&nbsp;command&nbsp;for&nbsp;a&nbsp;single&nbsp;LED<br>
+into&nbsp;the&nbsp;proper&nbsp;micro&nbsp;command<br>
+@param&nbsp;command:&nbsp;incoming&nbsp;json&nbsp;command&nbsp;from&nbsp;DSP<br>
+@return:&nbsp;String&nbsp;micro&nbsp;command</tt></dd></dl>
+ <dl><dt><a name="-translate_uart_port"><strong>translate_uart_port</strong></a>(panel_id)</dt><dd><tt>Simple&nbsp;method&nbsp;to&nbsp;translate&nbsp;between&nbsp;map_arrays<br>
+and&nbsp;the&nbsp;incoming&nbsp;panel_id&nbsp;for&nbsp;micro&nbsp;number<br>
+@param&nbsp;panel_id:&nbsp;ID&nbsp;from&nbsp;DSP&nbsp;for&nbsp;panel&nbsp;number<br>
+@return:&nbsp;Micro&nbsp;number&nbsp;for&nbsp;panel&nbsp;id</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>DEBUG</strong> = True<br>
+<strong>ERROR_DESCS</strong> = ['Invalid category or component.', 'State (parameter) out of range', 'Command not understood/syntax invalid.']<br>
+<strong>UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']<br>
+<strong>button_actions</strong> = {'fast_flash_green': 3, 'fast_flash_red': 6, 'flash_red_green': 7, 'off': 0, 'slow_flash_green': 2, 'slow_flash_red': 5, 'solid_green': 1, 'solid_red': 4}<br>
+<strong>button_numbers</strong> = {'all': 248, 'center_group': 241, 'semicircle': 240, 'upper_left_group': 243, 'upper_right_group': 242}<br>
+<strong>command_dict</strong> = {'execute_led_list': 67, 'get_enc_disp': 81, 'get_enc_pos': 83, 'get_enc_sens': 41, 'get_fw_version': 51, 'get_led_button': 65, 'get_led_fast_dcyc': 39, 'get_led_fast_rate': 35, 'get_led_slow_dcyc': 37, 'get_led_slow_rate': 33, ...}<br>
+<strong>error_codes</strong> = {'bad_checksum': 132, 'bad_start_char': 130, 'bad_stop_char': 133, 'incorrect_length': 18, 'invalid_command': 17, 'invalid_length': 131, 'invalid_parameter': 19, 'rx_buffer_overflow': 135, 'rx_message_timeout': 136, 'rx_misc_error': 129, ...}<br>
+<strong>exception_codes</strong> = {'button_stuck_on': 48, 'high_low_3.3v': 35, 'high_low_5v': 33, 'marginal_3.3v': 34, 'marginal_5v': 32, 'other_reset_occurred': 17, 'power_up_reset_occurred': 16}<br>
+<strong>map_arrays</strong> = {'logical': [4, 10, 16, 26, 32, 44, 46, 41, 35, 29, 13, 7, 1, 0, 6, 12, 28, 34, 40, 47, ...], 'micro': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, ...], 'panel': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...], 'pcb_conn': ['J2A', 'J2A', 'J2A', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2A', 'J2A', 'J2A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', ...]}<br>
+<strong>micro_array</strong> = {'/dev/ttyO1': {'logical': [2, 5, 7, 13, 15, 17, 20, 1, 3, 6, 12, 16, 19, 21, 0, 4, 11, 18, 22, 9, ...], 'panel': [145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 200, ...]}, '/dev/ttyO2': {'logical': [4, 10, 16, 26, 32, 44, 46, 41, 35, 29, 13, 7, 1, 2, 8, 14, 20, 24, 30, 38, ...], 'panel': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 27, 28, 29, 30, 31, 32, 33, ...]}, '/dev/ttyO4': {'logical': [0, 6, 12, 28, 34, 40, 47, 45, 33, 27, 17, 11, 5, 2, 8, 14, 18, 22, 30, 36, ...], 'panel': [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 44, 45, 46, 47, 48, 49, 50, ...]}, '/dev/ttyO5': {'logical': [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 58, 56, 54, 52, 50, ...], 'panel': [107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, ...]}}<br>
+<strong>start_char</strong> = 232<br>
+<strong>status_and_exceptions</strong> = {'ack': 128, 'encoder_pos_change': 17, 'error': 240, 'exception': 144, 'get_enc_disp': 81, 'get_enc_pos': 83, 'get_enc_sens': 41, 'get_fw_version': 51, 'get_led_button': 65, 'get_led_fast_dcyc': 39, ...}<br>
+<strong>stop_char</strong> = 238</td></tr></table>
+</body></html>
