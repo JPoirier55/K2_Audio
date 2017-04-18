@@ -215,22 +215,24 @@ def translate_led_array(command):
             if len(cid_array) > 16:
                 id_arrays = split_id_array(cid_array)
                 for id_array in id_arrays:
+                    value_str = ""
                     for id in id_array:
-                        micro_cmd += '{0:0{1}X}'.format(int(id), 2)
-                    micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+                        value_str += '{0:0{1}X}'.format(int(id), 2)
+                    micro_cmd += '{0}{1}{2:0{3}X}'.format(value_str.ljust(32, '0'), checksum, stop_char, 2)
                     micro_cmd = finalize_cmd(micro_cmd)
                     command_array[uart_port].append(micro_cmd)
                     micro_cmd = "{0:0{4}X}{1}{2:0{4}X}{3:0{4}X}".format(start_char, length, command_byte, value, 2)
 
             elif len(cid_array) == 1:
-                micro_cmd += '{0:0{1}X}'.format(int(cid_array[0]), 2)
-                micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+                value = '{0:0{1}X}'.format(int(cid_array[0]), 2)
+                micro_cmd += '{0}{1}{2:0{3}X}'.format(value.ljust(32, '0'), checksum, stop_char, 2)
                 micro_cmd = finalize_cmd(micro_cmd)
                 command_array[uart_port].append(micro_cmd)
             else:
+                value_str = ""
                 for id in cid_array:
-                    micro_cmd += '{0:0{1}X}'.format(int(id), 2)
-                micro_cmd += '{0}{1:0{2}X}'.format(checksum, stop_char, 2)
+                    value_str += '{0:0{1}X}'.format(int(id), 2)
+                micro_cmd += '{0}{1}{2:0{3}X}'.format(value_str.ljust(32, '0'), checksum, stop_char, 2)
                 micro_cmd = finalize_cmd(micro_cmd)
                 command_array[uart_port].append(micro_cmd)
 
@@ -339,11 +341,11 @@ def translate_enc_cmd(command):
     else:
         return None
     if action == 'GET':
-        micro_cmd = "{0:0{5}X}{1:0>2}{2:0{5}X}00{3:0>2}{4:0{5}X}".format(start_char, length, command_byte,
-                                                                         checksum, stop_char, 2)
+        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte,
+                                                                 checksum, stop_char, 2)
     else:
-        micro_cmd = "{0:0{6}X}{1:0>2}{2:0{6}X}{3:0>2}{4:0>2}{5:0{6}X}".format(start_char, length, command_byte,
-                                                                              parameters, checksum, stop_char, 2)
+        micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0>2}{4}{5:0{6}X}".format(start_char, length, command_byte,
+                                                                      parameters, checksum, stop_char, 2)
 
     micro_cmd = finalize_cmd(micro_cmd)
     return micro_cmd, UART_PORTS[0]

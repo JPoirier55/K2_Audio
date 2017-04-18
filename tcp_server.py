@@ -19,7 +19,6 @@ import threading
 from threading import Lock
 import serial
 import select
-import Queue
 import socket
 import time
 import logging
@@ -44,7 +43,19 @@ READY = False
 
 
 class StartUpTester:
+    """
+    Sequence that is initialized when server starts. Runs as follows:
+    
+    1. Check all uart ports for acks back
+    2. Light up all LEDS to be checked for broken ones, wait 5 seconds
+    3. Shut all LEDs off
+    4. Start carousel of LEDs until DSP sends status command
+    
+    """
     def __init__(self):
+        """
+        Init all serial ports and setup serial connections
+        """
         # self.uart_ports = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
         self.uart_ports = UART_PORTS
         self.sers = []
@@ -182,7 +193,7 @@ def read_serial_generic(ser):
     """
     Method to read any incoming message that
     falls within the format of our protocol between
-    Beaglebone and micro.
+    Beaglebone and micro. Creates a bytearray for command.
     Example message: E8021005FFEE
     See command_map.py for all message
     parameters and definitions
@@ -197,7 +208,7 @@ def read_serial_generic(ser):
     if ord(start_char) == 0xe8:
         length = ser.read(1)
         ba.append(length)
-
+        # Add switch ids corresponding to length
         for i in range(ord(length)):
             cmd_byte = ser.read(1)
             ba.append(cmd_byte)
@@ -211,6 +222,9 @@ def read_serial_generic(ser):
 
 
 class SerialSendHandler:
+    """
+    Handles all serial connections, controls serial locks for each UART port
+    """
     def __init__(self, baudrate=115200, timeout=None):
         """
         Init baudrate and timeout for serial
@@ -232,6 +246,7 @@ class SerialSendHandler:
         try:
             ack = False
             while True:
+                # Wait until lock is accessible, then acquire
                 if LOCKS[uart_port].acquire():
                     try:
                         self.ser = serial.Serial(uart_port, self.baudrate)
@@ -247,7 +262,6 @@ class SerialSendHandler:
                         if ba == MICRO_ACK:
                             print uart_port, " Ack recv"
                             ack = True
-
                     finally:
                         LOCKS[uart_port].release()
                     break
@@ -258,16 +272,22 @@ class SerialSendHandler:
 
 
 class DataHandler:
-
+    """
+    Handles all outgoing data for micro commands, and does checks for responses from micros as ACKs
+    """
     def __init__(self):
+        """
+        Init serial handler
+        """
         self.serial_handler = SerialSendHandler()
-        pass
 
     def handle_all_msg(self, uart_command):
         """
-        Handle messages that go to all uarts
-        @param uart_command: 
-        @return: 
+        Handle messages that go to all micros/ports
+        Checks to see if all ACKs are received 
+        
+        @param uart_command: incoming command to be sent to all micros
+        @return: True - ACK, False - NACK
         """
         ack_num = 0
         for uart_port in UART_PORTS:
@@ -283,8 +303,13 @@ class DataHandler:
     def handle_arr_msg(self, uart_command):
         """
         Handle messages that come in as arrays
-        @param uart_command: 
-        @return: 
+        and send them to corresponding micro/port 
+        for each message
+        Checks to see if all ACKs are received with
+        count vs ack_num 
+        
+        @param uart_command: Incoming dict with {'port':'command'} format 
+        @return: True - ACK, False - NACK
         """
         ack_num = 0
 
@@ -296,9 +321,12 @@ class DataHandler:
                     single_command = json.dumps(single_uart_command).strip('"')
                     if self.serial_handler.serial_handle(single_command, uart_port):
                         ack_num += 1
-                        print uart_port, " Ack recv"
-
         if ack_num == count:
+            for uart_port, uart_commands in uart_command.iteritems():
+                count += 1
+
+                if self.serial_handler.serial_handle(single_command, uart_port):
+                    ack_num += 1
             return True
         else:
             return False
@@ -307,9 +335,10 @@ class DataHandler:
         """
         Handle all other messages such as single leds,
         firmware or status messages
-        @param uart_command: 
-        @param uart_port: 
-        @return: 
+        
+        @param uart_command: Incoming uart command
+        @param uart_port: Corresponding port for command
+        @return: True - ACK, False - NACK
         """
         if(self.serial_handler.serial_handle(uart_command, uart_port)):
             return True
@@ -318,17 +347,27 @@ class DataHandler:
 
     def allocate(self, json_data):
         """
-        Allocate incoming data to whatever micro command 
-        it is supposed to be 
-        @param incoming_data: 
-        @return: None
+        Allocate incoming data to corresponding function
+        for further processing and micro messaging.
+        
+        Options include commands for:
+        
+        ERROR - Some error occurred while processing or from micro
+        ALL - Command will be sent to all micros, and expect 4 acks
+        ARRAY - Command will be sent to corresponding micros 
+        Other - Command falls into other category, including single LED/SW commands
+        
+        @param json_data: Incoming json data from TCP handler
+        @return: Response to be sent back through TCP to dsp
         """
-
         response = ""
         try:
+            # Ensure json is of correct format
             if all(key in json_data for key in
                    ("action", "category", "component", "component_id", "value")):
                 msg = MessageHandler(json_data)
+
+                # Create command and allocate port for serial sending
                 response, (uart_command, uart_port) = msg.process_command()
 
                 if response['category'] == 'ERROR':
@@ -364,16 +403,18 @@ class DataHandler:
 def tcp_handler(sock):
     """
     Main tcp handler which cycles through 
-    readable file descriptors to check for 
+    readable socket file descriptors to check for 
     any incoming tcp packets. Allows only 5 
     readable connections, then drops the ones
     that aren't used. There is a single socket
     as the main file descriptor, followed by 
     other connections, which get culled when
     more than 5.
-    @param sock: 
+    
+    @param sock: main socket connection
     @return: None
     """
+    # Index 1 of inputs is always main socket connection
     inputs = [sock]
     outputs = []
     data_handler = DataHandler()
@@ -382,9 +423,12 @@ def tcp_handler(sock):
 
     try:
         while inputs:
+            # Cut out idle socket connections when there are more than 5
             if len(inputs) > 5:
                 for t in range(1, len(inputs)-1):
+                    # Close extra idle connections
                     inputs[t].close()
+                # Remove extra idle connections, keep index 1 (main socket) and last index (current socket)
                 inputs = [inputs[0], inputs[len(inputs)-1]]
 
             readable, writable, exceptional = select.select(inputs, [], [sock], 1)
@@ -403,16 +447,13 @@ def tcp_handler(sock):
                         except Exception as e:
                             return error_response(0)[0]
 
+                        # Check for basic status command to kick out of startup sequence
                         if json_data['category'] == 'STS' and json_data['component'] == 'SYS':
                             READY = True
 
-                        if DEBUG:
-                            print 'Data:', data
-
                         if READY:
                             response = data_handler.allocate(json_data)
-                            if DEBUG:
-                                print 'return response to ', client_address, '  ', response
+
                             s.sendall(json.dumps(response))
                             if s not in outputs:
                                 outputs.append(s)
@@ -429,8 +470,14 @@ def tcp_handler(sock):
         return
 
 
-class SerialHandler:
+class SerialReceiveHandler:
+    """
+    Handles all incoming unsolicited messages from UARTS, controls RTS/CTS GPIOs to handle unsolicited
+    """
     def __init__(self):
+        """
+        Init all uart ports to listen on, init TCP client for connecting to DSP server
+        """
         self.uart_ports = UART_PORTS
         self.ser = None
         self.gpio_fds = []
@@ -593,6 +640,15 @@ class SerialHandler:
 
 
 def check_logfile_size():
+    """
+    Clear logfile if the size is greater than
+    1MB
+    This assumes the log file will be checked, as
+    well as used. This could be used for debugging 
+    during development or triage during use.
+    
+    @return: None 
+    """
     logfile = os.stat('K2_logging.log')
     size = logfile.st_size
     if size > 1000000:
@@ -613,15 +669,15 @@ if __name__ == "__main__":
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serial_handler = SerialHandler()
+    serial_handler = SerialReceiveHandler()
 
     serial_thread = threading.Thread(target=serial_handler.serial_worker)
     serial_thread.daemon = True
     serial_thread.start()
 
-    startup_thread = threading.Thread(target=startup_worker)
-    startup_thread.daemon = True
-    startup_thread.start()
+    # startup_thread = threading.Thread(target=startup_worker)
+    # startup_thread.daemon = True
+    # startup_thread.start()
 
     server_address = (HOST, int(PORT))
     print 'Starting server on:', server_address
@@ -630,5 +686,4 @@ if __name__ == "__main__":
     sock.setblocking(0)
     sock.listen(1)
 
-    # while True:
     tcp_handler(sock)
