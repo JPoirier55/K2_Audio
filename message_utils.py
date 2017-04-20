@@ -296,8 +296,8 @@ def translate_cfg_cmd(dsp_command):
     else:
         return None, None
     if action == 'GET':
-        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}00{3}{4:0{5}X}".format(start_char, length, command_byte,
-                                                                 checksum, stop_char, 2)
+        micro_cmd = "{0:0{5}X}{1}{2:0{5}X}{3}{4:0{5}X}".format(start_char, length, command_byte,
+                                                               checksum, stop_char, 2)
     else:
         micro_cmd = "{0:0{6}X}{1}{2:0{6}X}{3:0>2}{4}{5:0{6}X}".format(start_char, length, command_byte,
                                                                       parameters, checksum, stop_char, 2)

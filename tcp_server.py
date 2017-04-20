@@ -263,11 +263,15 @@ class SerialSendHandler:
                         if DEBUG:
                             print command, uart_port
 
+                        print 'command'
+                        print ":".join("{:02x}".format(c) for c in command)
+
                         self.ser.write(command)
+
                         uart_response, checksum = read_serial_generic(self.ser)
-                        # print 'inside serail'
-                        # print ":".join("{:02x}".format(c) for c in uart_response)
-                        # print checksum
+                        print 'response'
+                        print ":".join("{:02x}".format(c) for c in uart_response)
+                        print checksum
 
                     finally:
                         LOCKS[uart_port].release()
@@ -393,7 +397,7 @@ class DataHandler:
                                 response['action'] = '='
                                 return response
                         else:
-                            response['value'] = uart_response[3]
+                            response['value'] = str(uart_response[3])
                             response['action'] = '='
                             return response
                     else:
