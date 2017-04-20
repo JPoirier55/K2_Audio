@@ -35,6 +35,11 @@ GPIO.output('P8_45', GPIO.LOW)
 # CTS_GPIO_EDGE_FDS = ['/sys/class/gpio/gpio71/edge', '/sys/class/gpio/gpio73/edge',
 #                      '/sys/class/gpio/gpio75/edge', '/sys/class/gpio/gpio77/edge']
 #
+ser = serial.Serial('/dev/ttyO1', 115200)
+
+ser.write(bytearray.fromhex('E80242010255EE'))
+while True:
+    print ser.read(1)
 
 # def serial_worker():
 #     """

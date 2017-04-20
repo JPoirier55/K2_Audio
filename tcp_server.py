@@ -406,7 +406,6 @@ class DataHandler:
                 elif category == "STS":
                     ack_num = 0
                     uart_command, uart_port = message_handler.run_status_cmd()
-                    # TODO: ASK MIKE: should I be sending a cmd to get all firmware versions for each?
                     uart_responses = []
                     if uart_port == 'ALL':
                         for port in UART_PORTS:
@@ -422,7 +421,6 @@ class DataHandler:
                                 return response
                         if cid == "FW":
                             if len(set([str(uart_str) for uart_str in uart_responses])) <= 1:
-                                # TODO: ASK MIKE: firmware structure, number?
                                 response['value'] = FIRMWARE[str(uart_responses[0][3])]
                                 response['action'] = '='
                                 return response
@@ -432,21 +430,22 @@ class DataHandler:
                                 return response
                     else:
                         return error_response(1)[0]
-                # elif category == "BTN":
-                #     uart_command, uart_port = message_handler.run_button_cmd()
-                #     if uart_port == "ALL":
-                #         if self.handle_all_msg(uart_command):
-                #             return response
-                #
-                #     elif uart_port == "ARRAY":
-                #         if self.handle_arr_msg(uart_command):
-                #             return response
-                #
-                #     elif uart_port in UART_PORTS:
-                #         if self.handle_other_msg(uart_command, uart_port):
-                #             return response
-                #     else:
-                #         return response
+                elif category == "BTN":
+                    uart_command, uart_port = message_handler.run_button_cmd()
+                    if uart_port == "ALL":
+                        uart_responses = []
+                        for port in UART_PORTS:
+                            uart_responses.append(self.serial_handler.serial_handle(uart_command, port))
+
+                    elif uart_port == "ARRAY":
+                        if self.handle_arr_msg(uart_command):
+                            return response
+
+                    elif uart_port in UART_PORTS:
+                        if self.handle_other_msg(uart_command, uart_port):
+                            return response
+                    else:
+                        return response
                 # elif category == "ENC":
                 #     response, (uart_command, uart_port) = message_handler.run_encoder_cmd()
                 else:
