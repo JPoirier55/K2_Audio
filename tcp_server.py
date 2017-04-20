@@ -39,7 +39,10 @@ LOCKS = {'/dev/ttyO1': uart_lock1,
 
 xLOCKS = {'/dev/ttyO1': uart_lock1}
 
-READY = False
+if DEBUG:
+    READY = True
+else:
+    READY = False
 
 
 class StartUpTester:
@@ -72,19 +75,6 @@ class StartUpTester:
         for uart in self.uart_ports:
             self.sers.append(serial.Serial(uart, self.baudrate))
 
-    def calculate_checksum(self, micro_cmd):
-        """
-        Calculate checksum from micro_cmd bytearray
-        object. Same method as in message_utils,
-        but used here as well.
-        @param micro_cmd: incoming micro command bytearray
-        @return: checksum integer
-        """
-        sum = 0
-        for i in range(len(micro_cmd) - 2):
-            sum += micro_cmd[i]
-        return sum % 0x100
-
     def read_serial(self, ser):
         """
         Method to read incoming message from
@@ -95,7 +85,7 @@ class StartUpTester:
         """
         ba, checksum = read_serial_generic(ser)
 
-        c = self.calculate_checksum(ba)
+        c = calculate_checksum(ba)
 
         if c == ord(checksum) and str(ba) == MICRO_ACK:
             return 1
@@ -153,7 +143,7 @@ class StartUpTester:
             if not READY:
                 ser = self.sers[map_arrays['micro'][led-1]]
                 cmd = 'E8024001{0:0{1}X}00EE'.format(map_arrays['logical'][led-1], 2)
-                chk = self.calculate_checksum(bytearray.fromhex(cmd))
+                chk = calculate_checksum(bytearray.fromhex(cmd))
                 cmd = cmd[:-4] + str(hex(chk)[2:]) + cmd[-2:]
                 cmd = bytearray.fromhex(cmd)
 
@@ -187,6 +177,20 @@ def startup_worker():
                         print 'Stopping startup sequence'
                     break
             break
+
+
+def calculate_checksum(micro_cmd):
+    """
+    Calculate checksum from micro_cmd bytearray
+    object. Same method as in message_utils,
+    but used here as well.
+    @param micro_cmd: incoming micro command bytearray
+    @return: checksum integer
+    """
+    sum = 0
+    for i in range(len(micro_cmd) - 2):
+        sum += micro_cmd[i]
+    return sum % 0x100
 
 
 def read_serial_generic(ser):
@@ -243,6 +247,8 @@ class SerialSendHandler:
         @param uart_port: port command comes on
         @return:
         """
+        uart_response = None
+        checksum = None
         try:
             ack = False
             while True:
@@ -252,20 +258,25 @@ class SerialSendHandler:
                         self.ser = serial.Serial(uart_port, self.baudrate)
                         self.ser.flushInput()
 
+                        # TODO: start from here and make everything bytearrays
                         command = bytearray.fromhex(uart_command)
                         if DEBUG:
                             print command, uart_port
 
                         self.ser.write(command)
-                        ba, checksum = read_serial_generic(self.ser)
-                        # TODO: Check command for response if data should be returned, ie status
-                        if ba == MICRO_ACK:
-                            print uart_port, " Ack recv"
-                            ack = True
+                        uart_response, checksum = read_serial_generic(self.ser)
+                        # print 'inside serail'
+                        # print ":".join("{:02x}".format(c) for c in uart_response)
+                        # print checksum
+
                     finally:
                         LOCKS[uart_port].release()
                     break
-            return ack
+
+            if calculate_checksum(uart_response) == ord(checksum):
+                return uart_response
+            else:
+                return None
         except serial.SerialException, e:
             logging.exception("{0} - Cannot write serial message".format(datetime.datetime.now()))
             return None
@@ -345,6 +356,8 @@ class DataHandler:
         else:
             return False
 
+    # def handle_set_msg(self):
+
     def allocate(self, json_data):
         """
         Allocate incoming data to corresponding function
@@ -365,30 +378,86 @@ class DataHandler:
             # Ensure json is of correct format
             if all(key in json_data for key in
                    ("action", "category", "component", "component_id", "value")):
-                msg = MessageHandler(json_data)
+                message_handler = MessageHandler(json_data)
+                category = json_data['category']
+                action = json_data['action']
+                cid = json_data['component_id']
+                response = json_data
 
-                # Create command and allocate port for serial sending
-                response, (uart_command, uart_port) = msg.process_command()
+                if category == "CFG" and (action == "SET" or action == "GET"):
+                    uart_command, uart_port = message_handler.run_config_cmd()
+                    uart_response = self.serial_handler.serial_handle(uart_command, uart_port)
+                    if uart_response is not None:
+                        if action == "SET":
+                            if uart_response == MICRO_ACK:
+                                response['action'] = '='
+                                return response
+                        else:
+                            response['value'] = uart_response[3]
+                            response['action'] = '='
+                            return response
+                    else:
+                        return error_response(1)[0]
 
-                if response['category'] == 'ERROR':
-                    return error_response(2)[0]
-
-                if DEBUG:
-                    print 'response:', response
-                    print 'uart com :', uart_command
-                    print 'uart port: ', uart_port
-
-                if uart_port == "ALL":
-                    if self.handle_all_msg(uart_command):
-                        return response
-
-                elif uart_port == "ARRAY":
-                    if self.handle_arr_msg(uart_command):
-                        return response
-
+                elif category == "STS":
+                    ack_num = 0
+                    uart_command, uart_port = message_handler.run_status_cmd()
+                    # TODO: ASK MIKE: should I be sending a cmd to get all firmware versions for each?
+                    uart_responses = []
+                    if uart_port == 'ALL':
+                        for port in UART_PORTS:
+                            uart_responses.append(self.serial_handler.serial_handle(uart_command, port))
+                    if len(uart_responses) > 0:
+                        if cid == "STS":
+                            for uart_response in uart_responses:
+                                if uart_response == MICRO_ACK:
+                                    ack_num += 1
+                            if ack_num == 4:
+                                response['value'] = '1'
+                                response['action'] = '='
+                                return response
+                        if cid == "FW":
+                            if len(set([str(uart_str) for uart_str in uart_responses])) <= 1:
+                                # TODO: ASK MIKE: firmware structure, number?
+                                response['value'] = FIRMWARE[str(uart_responses[0][3])]
+                                response['action'] = '='
+                                return response
+                            else:
+                                response['value'] = 'xxx'
+                                response['action'] = '='
+                                return response
+                    else:
+                        return error_response(1)[0]
+                # elif category == "BTN":
+                #     uart_command, uart_port = message_handler.run_button_cmd()
+                #     if uart_port == "ALL":
+                #         if self.handle_all_msg(uart_command):
+                #             return response
+                #
+                #     elif uart_port == "ARRAY":
+                #         if self.handle_arr_msg(uart_command):
+                #             return response
+                #
+                #     elif uart_port in UART_PORTS:
+                #         if self.handle_other_msg(uart_command, uart_port):
+                #             return response
+                #     else:
+                #         return response
+                # elif category == "ENC":
+                #     response, (uart_command, uart_port) = message_handler.run_encoder_cmd()
                 else:
-                    if self.handle_other_msg(uart_command, uart_port):
-                        return response
+                    return error_response(1)[0]
+
+                # # Create command and allocate port for serial sending
+                # response, (uart_command, uart_port) = msg.process_command()
+
+                # if response['category'] == 'ERROR':
+                #     return error_response(2)[0]
+
+                # if DEBUG:
+                #     print 'response:', response
+                #     print 'uart com :', uart_command
+                #     print 'uart port: ', uart_port
 
             else:
                 if DEBUG:
@@ -396,6 +465,8 @@ class DataHandler:
                 return error_response(0)[0]
 
         except TypeError, e:
+            print e
+            print'ERRO2'
             logging.exception("{0} - Failed reading and allocating micro message".format(datetime.datetime.now()))
             return error_response(0)[0]
 
@@ -466,6 +537,7 @@ def tcp_handler(sock):
                         s.close()
 
     except socket.error, e:
+        print'ERROR'
         logging.exception("{0} - Failed to read data from socket".format(datetime.datetime.now()))
         return
 

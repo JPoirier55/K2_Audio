@@ -75,7 +75,7 @@ class SerialReceiveHandler:
         @param baudrate: baudrate, default 115200
         @param timeout: serial timeout, default None
         """
-        self.uarts = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+        self.uarts = ['/dev/ttyO4']
         self.timeout = timeout
         serial_listeners = self.setup_listeners()
         # self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -133,6 +133,10 @@ class SerialReceiveHandler:
                                 incoming_command += var
 
                         # msg = handle_unsolicited(incoming_command)
+                        ba = bytearray(incoming_command)
+                        print 'serial'
+                        print ":".join("{:02x}".format(c) for c in ba)
+                        print 'done serial'
                         serial_connection.write(bytearray.fromhex(MICRO_ACK))
                         # self.TCP_CLIENT.sendall(msg)
 
