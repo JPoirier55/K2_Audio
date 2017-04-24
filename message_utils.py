@@ -18,25 +18,6 @@ from command_map import *
 
 DEBUG = True
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
-ERROR_DESCS = ['Invalid category or component.',
-               'State (parameter) out of range',
-               'Command not understood/syntax invalid.']
-
-
-def error_response(error_id):
-    """
-    Error handler and builder
-    @param error_id: ID of error
-    @return: Error response in JSON format
-    """
-    response = {'category': 'ERROR',
-                'component': '',
-                'component_id': '',
-                'action': '=',
-                'value': str(error_id),
-                'description': ERROR_DESCS[error_id-1]}
-
-    return response, (None, None)
 
 
 def translate_uart_port(panel_id):
@@ -102,20 +83,6 @@ def allocate_micro_cmds(json_command):
         except:
             continue
     return micro_commands
-#
-#
-# def array_to_string(array):
-#     """
-#     Simple method to convert array
-#     to string sep by whitespace
-#     @param array: incoming array
-#     @return: string of array
-#     """
-#     string = ""
-#     for element in array:
-#         string += str(element) + " "
-#     return string
-#
 
 
 def calculate_length(micro_cmd):
@@ -186,12 +153,12 @@ def translate_led_array(json_command):
     cid_arrays = allocate_micro_cmds(json_command)
 
     for micro_num, cid_array in cid_arrays.iteritems():
-
         if len(cid_array) > 0:
             micro_cmd = bytearray([start_char, 0, command_byte, value])
             uart_port = UART_PORTS[int(micro_num[-1])]
             command_array[uart_port] = []
 
+            # Handle an array that ends up being longer than 16 for one micro
             if len(cid_array) > 16:
                 id_arrays = split_id_array(cid_array)
 
@@ -207,15 +174,9 @@ def translate_led_array(json_command):
 
                     micro_cmd = bytearray([start_char, 0, command_byte, value])
 
-            elif len(cid_array) == 1:
-                micro_cmd.append(int(cid_array[0]))
-                for i in range(15):
-                    micro_cmd.append(0)
-                micro_cmd.append(0)
-                micro_cmd.append(stop_char)
-                micro_cmd = finalize_cmd(micro_cmd)
-                command_array[uart_port].append(micro_cmd)
+            # Handle array that is less than 16 for one micro
             else:
+                print len(cid_array)
                 for id in cid_array:
                     micro_cmd.append(int(id))
                 for i in range(16 - len(cid_array)):
@@ -419,13 +380,14 @@ def handle_unsolicited(micro_command, uart_port):
                            'value': value}
 
         elif cmd == 0xF0:
+            # TODO: hadnle unsolicited error messages
             value = ord(micro_command[3])
             tcp_command = {'category': 'ERROR',
                            'component': '',
                            'component_id': '',
                            'action': '=',
                            'value': value,
-                           'description': ERROR_DESCS[value]}
+                           'description': 'This should have an error code. TODO'}
 
         elif cmd == 0x90:
             value = ord(micro_command[3])
@@ -447,7 +409,10 @@ def handle_unsolicited(micro_command, uart_port):
 
 class MessageHandler:
 
-    def __init__(self, json_request):
+    def __init__(self):
+        pass
+
+    def parse_json(self, json_request):
         self.json_request = json_request
         self.category = self.json_request['category']
         self.component = self.json_request['component']
@@ -511,4 +476,4 @@ class MessageHandler:
             micro_command, uart_port = translate_single_led(self.json_request)
             return micro_command, uart_port
         else:
-            return error_response(1)
+            return None, None

@@ -72,3 +72,7 @@ FIRMWARE = {'1': '001',
             '5': '005',
             '6': '006',
             '7': '007'}
+
+ERROR_DESCS = ['Invalid category or component.',
+               'State (parameter) out of range',
+               'Command not understood/syntax invalid.']
