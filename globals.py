@@ -76,3 +76,5 @@ FIRMWARE = {'1': '001',
 ERROR_DESCS = ['Invalid category or component.',
                'State (parameter) out of range',
                'Command not understood/syntax invalid.']
+
+EXECUTE_LED_LIST = bytearray.fromhex('E802440000EE')

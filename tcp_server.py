@@ -25,6 +25,7 @@ import logging
 import os
 import datetime
 from globals import *
+from copy import deepcopy
 
 
 uart_lock1 = Lock()
@@ -231,7 +232,7 @@ def read_serial_generic(ser):
     return ba, checksum
 
 
-def error_response(error_id):
+def error_response(error_id, extra_data=""):
     """
     Error handler and builder
     
@@ -243,7 +244,8 @@ def error_response(error_id):
                 'component_id': '',
                 'action': '=',
                 'value': str(error_id),
-                'description': ERROR_DESCS[error_id-1]}
+                'description': ERROR_DESCS[error_id-1],
+                'extra_data': extra_data}
 
     return response
 
@@ -275,9 +277,7 @@ class SerialSendHandler:
         uart_response = None
         checksum = None
 
-        print uart_command
         try:
-            ack = False
             while True:
                 # Wait until lock is accessible, then acquire
                 if LOCKS[uart_port].acquire():
@@ -292,7 +292,6 @@ class SerialSendHandler:
                             print uart_command, uart_port
                             print 'response'
                             print ":".join("{:02x}".format(c) for c in uart_response)
-                            print checksum
                     finally:
                         LOCKS[uart_port].release()
                     break
@@ -339,6 +338,7 @@ class DataHandler:
         @return: Response JSON
         """
         ack_num = 0
+        exec_ack_num = 0
         uart_command, uart_port = self.message_handler.run_button_cmd()
 
         response = self.json_data
@@ -348,6 +348,7 @@ class DataHandler:
             uart_responses = []
             for port in UART_PORTS:
                 uart_responses.append(self.serial_handler.serial_handle(uart_command, port))
+
             for uart_response in uart_responses:
                 if uart_response == MICRO_ACK:
                     ack_num += 1
@@ -359,17 +360,30 @@ class DataHandler:
         # Handle sending an array of led ids for certain micros
         elif uart_port == "ARRAY":
             uart_responses = []
+            exec_uart_responses = []
+
+            exec_command = deepcopy(EXECUTE_LED_LIST)
+            exec_command[3] = int(self.json_data['value'])
+            exec_command[4] = calculate_checksum(exec_command)
+
             for specific_uart_port, uart_command_array in uart_command.iteritems():
                 for specific_uart_command in uart_command_array:
-                    uart_responses.append(self.serial_handler.serial_handle(specific_uart_command,
-                                                                            specific_uart_port))
+                    # Get response from array command for LEDs
+                    uart_responses.append(self.serial_handler.serial_handle(specific_uart_command, specific_uart_port))
+                    # Get response from sending execute command for array of LEDs
+                    exec_uart_responses.append(self.serial_handler.serial_handle(exec_command, specific_uart_port))
+
+                # Check both sets of commands get correct number of acks back
                 for uart_response in uart_responses:
                     if uart_response == MICRO_ACK:
                         ack_num += 1
-
-                if ack_num == len(uart_command):
+                for uart_response in exec_uart_responses:
+                    if uart_response == MICRO_ACK:
+                        exec_ack_num += 1
+                if ack_num == len(uart_command) and exec_ack_num == len(uart_command):
                     response['action'] = '='
                     return response
+
         # Handle sending
         elif uart_port in UART_PORTS:
             uart_response = self.serial_handler.serial_handle(uart_command, uart_port)
@@ -385,6 +399,7 @@ class DataHandler:
                 return response
         else:
             return error_response(1)
+        return error_response(1)
 
     def handle_enc(self, action):
         """
@@ -468,12 +483,31 @@ class DataHandler:
                 if uart_response == MICRO_ACK:
                     response['action'] = '='
                     return response
+                elif uart_response[2] == message_utils.status_and_exceptions['error']:
+                    return error_response(1, self.get_error_desc(uart_response[3]))
+                else:
+                    return error_response(1)
+
             else:
-                response['value'] = str(uart_response[3])
-                response['action'] = '='
-                return response
+                if uart_response[2] == message_utils.status_and_exceptions['error']:
+                    return error_response(1, self.get_error_desc(uart_response[3]))
+                else:
+                    response['value'] = str(uart_response[3])
+                    response['action'] = '='
+                    return response
         else:
             return error_response(1)
+
+    def get_error_desc(self, code):
+        """
+        Translate error byte code into error description
+        to be added to response json
+        @param code: Error byte code
+        @return: Description string
+        """
+        for desc, byte_code in message_utils.error_codes.iteritems():
+            if code == byte_code:
+                return desc
 
     def allocate(self):
         """

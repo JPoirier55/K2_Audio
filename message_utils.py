@@ -137,10 +137,8 @@ def translate_led_array(json_command):
     @return: Dict with uart ports and strings for micro
     commands
     """
-    # TODO: send the command to send the LED array afterwards
     command_array = {}
     logical_ids = []
-    value = int(json_command['value'])
     command_byte = command_dict['set_led_list']
 
     for id in json_command['component_id']:
@@ -154,7 +152,7 @@ def translate_led_array(json_command):
 
     for micro_num, cid_array in cid_arrays.iteritems():
         if len(cid_array) > 0:
-            micro_cmd = bytearray([start_char, 0, command_byte, value])
+            micro_cmd = bytearray([start_char, 0, command_byte])
             uart_port = UART_PORTS[int(micro_num[-1])]
             command_array[uart_port] = []
 
@@ -172,7 +170,7 @@ def translate_led_array(json_command):
                     micro_cmd = finalize_cmd(micro_cmd)
                     command_array[uart_port].append(micro_cmd)
 
-                    micro_cmd = bytearray([start_char, 0, command_byte, value])
+                    micro_cmd = bytearray([start_char, 0, command_byte])
 
             # Handle array that is less than 16 for one micro
             else:
@@ -219,7 +217,7 @@ def translate_cfg_cmd(json_command):
     cid = json_command['component_id']
     action = json_command['action']
     value = json_command['value']
-    parameters = int(value)
+    parameters = int(hex(int(value))[2:], 16)
 
     if comp == 'RTE' and cid == 'SLO' and action == 'SET':
         command_byte = command_dict['set_led_slow_rate']
@@ -243,11 +241,11 @@ def translate_cfg_cmd(json_command):
         command_byte = command_dict['get_enc_sens']
     else:
         return None, None
+
     if action == 'GET':
         micro_cmd = bytearray([start_char, 0, command_byte, 0, stop_char])
     else:
         micro_cmd = bytearray([start_char, 0, command_byte, parameters, 0, stop_char])
-
     micro_cmd = finalize_cmd(micro_cmd)
     return micro_cmd, UART_PORTS[0]
 
@@ -263,7 +261,7 @@ def translate_enc_cmd(command):
     comp = command['component']
     value = command['value']
     action = command['action']
-    parameters = int(value)
+    parameters = int(hex(int(value))[2:], 16)
 
     if comp == 'DIS' and action == 'SET':
         command_byte = command_dict['set_enc_disp']
@@ -292,7 +290,6 @@ def translate_single_led(json_command):
     @param command: incoming json command from DSP
     @return: String micro command
     """
-    # TODO: Move checking of json to tcp_server module before building command
     try:
         parameter = int(json_command['component_id'])
         value = int(json_command['value'])
@@ -345,6 +342,7 @@ def handle_unsolicited(micro_command, uart_port):
     @param uart_port: 
     @return: TCP command for dsp 
     """
+    # TODO: Exception codes for any unsolicited exception
     for b in micro_command:
         print ord(b)
 
@@ -380,22 +378,30 @@ def handle_unsolicited(micro_command, uart_port):
                            'value': value}
 
         elif cmd == 0xF0:
-            # TODO: hadnle unsolicited error messages
             value = ord(micro_command[3])
+            desc = ""
+            for description, byte_code in error_codes.iteritems():
+                if value == byte_code:
+                    desc = description
             tcp_command = {'category': 'ERROR',
                            'component': '',
                            'component_id': '',
                            'action': '=',
                            'value': value,
-                           'description': 'This should have an error code. TODO'}
+                           'description': desc}
 
         elif cmd == 0x90:
             value = ord(micro_command[3])
+            desc = ""
+            for description, byte_code in exception_codes.iteritems():
+                if value == byte_code:
+                    desc = description
             tcp_command = {'category': 'EXCEPTION',
                            'component': '',
                            'component_id': '',
                            'action': '=',
-                           'value': value}
+                           'value': value,
+                           'description': desc}
 
         elif cmd == 0x80:
             tcp_command = {'category': 'ACK',
@@ -464,8 +470,6 @@ class MessageHandler:
                     tcp_response, (micro command, uart port)
 
         """
-        # TODO: Change command to bytearray instead of string at start
-
         if self.component == 'LED' and isinstance(self.component_id, list):
             micro_command, uart_port = translate_led_array(self.json_request)
             return micro_command, uart_port

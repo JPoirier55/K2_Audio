@@ -14,6 +14,7 @@ date           programmer         modification
 """
 import unittest
 from message_utils import *
+import globals
 import json
 from button_led_map import map_arrays
 import socket
@@ -261,8 +262,22 @@ class TestCommands():
         for port, cmd in micro_cmd2[0].iteritems():
             for cmd_ in cmd:
                 print ":".join("{:02x}".format(c) for c in cmd_)
-
+import tcp_server
+import copy
 if __name__ == '__main__':
+    # exec_command = copy.deepcopy(globals.EXECUTE_LED_LIST)
+    # exec_command[3] = int("1")
+    # exec_command[4] = tcp_server.calculate_checksum(exec_command)
+
+    # print ":".join("{:02x}".format(c) for c in globals.EXECUTE_LED_LIST)
+    # print ":".join("{:02x}".format(c) for c in exec_command)
+    # cmd2 = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SET", "value": "100"}
+    test = "19"
+    print int(hex(int(test)).strip('0x'))
+
+
+    # for r in translate_enc_cmd(cmd2)[0]:
+    #     print "{:02x}".format(r)
     # unittest.main()
-    t = TestCommands()
-    t.test_bytearray_change()
+    # t = TestCommands()
+    # t.test_bytearray_change()
