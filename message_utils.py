@@ -79,7 +79,7 @@ def allocate_micro_cmds(json_command):
         try:
             if int(cid) < len(map_arrays['micro']):
                 micro_num = map_arrays['micro'][(int(cid))-1]
-                micro_commands['micro_' + str(micro_num)].append(cid)
+                micro_commands['micro_' + str(micro_num)].append(translate_logical_id(cid))
         except:
             continue
     return micro_commands
