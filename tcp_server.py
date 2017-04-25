@@ -12,8 +12,8 @@ WRITTEN BY: Jake Poirier
 """
 
 import json
-from message_utils import MessageHandler, error_response, handle_unsolicited
-from button_led_map import map_arrays
+import message_utils
+import button_led_map
 import argparse
 import threading
 from threading import Lock
@@ -25,6 +25,7 @@ import logging
 import os
 import datetime
 from globals import *
+from copy import deepcopy
 
 
 uart_lock1 = Lock()
@@ -37,9 +38,10 @@ LOCKS = {'/dev/ttyO1': uart_lock1,
          '/dev/ttyO4': uart_lock4,
          '/dev/ttyO5': uart_lock5}
 
-xLOCKS = {'/dev/ttyO1': uart_lock1}
-
-READY = False
+if DEBUG:
+    READY = True
+else:
+    READY = False
 
 
 class StartUpTester:
@@ -67,35 +69,24 @@ class StartUpTester:
         """
         Create list of serial file descriptors
         needed for running the initial start sequence
+        
         @return: None
         """
         for uart in self.uart_ports:
             self.sers.append(serial.Serial(uart, self.baudrate))
 
-    def calculate_checksum(self, micro_cmd):
-        """
-        Calculate checksum from micro_cmd bytearray
-        object. Same method as in message_utils,
-        but used here as well.
-        @param micro_cmd: incoming micro command bytearray
-        @return: checksum integer
-        """
-        sum = 0
-        for i in range(len(micro_cmd) - 2):
-            sum += micro_cmd[i]
-        return sum % 0x100
-
     def read_serial(self, ser):
         """
         Method to read incoming message from
         micro after sending message
+        
         @param ser: serial object
         @return: 1 - checksum correct and ack received
                  2 - either checksum or ack not correct/received
         """
         ba, checksum = read_serial_generic(ser)
 
-        c = self.calculate_checksum(ba)
+        c = calculate_checksum(ba)
 
         if c == ord(checksum) and str(ba) == MICRO_ACK:
             return 1
@@ -106,6 +97,7 @@ class StartUpTester:
         """
         Send micro command for initial startup
         sequence, and read incoming ack
+        
         @param micro_cmd: outgoing micro command
         @return: True - If all four acks have been received
                  False - If less than four received
@@ -127,6 +119,7 @@ class StartUpTester:
         check all four micros, then have all
         LEDs come on, wait 5 seconds, then 
         turn off.
+        
         @return: True - If everything worked
                  False - If an error occurred
         """
@@ -147,13 +140,14 @@ class StartUpTester:
         to turn on in the order 1-2-3-...202-203
         Each one has a wait of .1 seconds between
         turning on
+        
         @return: None
         """
-        for led in map_arrays['panel']:
+        for led in button_led_map.map_arrays['panel']:
             if not READY:
-                ser = self.sers[map_arrays['micro'][led-1]]
-                cmd = 'E8024001{0:0{1}X}00EE'.format(map_arrays['logical'][led-1], 2)
-                chk = self.calculate_checksum(bytearray.fromhex(cmd))
+                ser = self.sers[button_led_map.map_arrays['micro'][led-1]]
+                cmd = 'E8024001{0:0{1}X}00EE'.format(button_led_map.map_arrays['logical'][led-1], 2)
+                chk = calculate_checksum(bytearray.fromhex(cmd))
                 cmd = cmd[:-4] + str(hex(chk)[2:]) + cmd[-2:]
                 cmd = bytearray.fromhex(cmd)
 
@@ -170,6 +164,7 @@ def startup_worker():
     when its time to reconnect. This thread
     will run until that message is sent, and
     will be killed when it is sent.
+    
     @return: None, thread closed
     """
     s = StartUpTester()
@@ -189,6 +184,21 @@ def startup_worker():
             break
 
 
+def calculate_checksum(micro_cmd):
+    """
+    Calculate checksum from micro_cmd bytearray
+    object. Same method as in message_utils,
+    but used here as well.
+    
+    @param micro_cmd: incoming micro command bytearray
+    @return: checksum integer
+    """
+    sum = 0
+    for i in range(len(micro_cmd) - 2):
+        sum += micro_cmd[i]
+    return sum % 0x100
+
+
 def read_serial_generic(ser):
     """
     Method to read any incoming message that
@@ -197,6 +207,7 @@ def read_serial_generic(ser):
     Example message: E8021005FFEE
     See command_map.py for all message
     parameters and definitions
+    
     @param ser: Serial object being read from
     @return: Tuple of message in bytes, and checksum
     """
@@ -221,6 +232,24 @@ def read_serial_generic(ser):
     return ba, checksum
 
 
+def error_response(error_id, extra_data=""):
+    """
+    Error handler and builder
+    
+    @param error_id: ID of error
+    @return: Error response in JSON format
+    """
+    response = {'category': 'ERROR',
+                'component': '',
+                'component_id': '',
+                'action': '=',
+                'value': str(error_id),
+                'description': ERROR_DESCS[error_id-1],
+                'extra_data': extra_data}
+
+    return response
+
+
 class SerialSendHandler:
     """
     Handles all serial connections, controls serial locks for each UART port
@@ -228,6 +257,7 @@ class SerialSendHandler:
     def __init__(self, baudrate=115200, timeout=None):
         """
         Init baudrate and timeout for serial
+        
         @param baudrate: baudrate, default 115200
         @param timeout: timeout, default None
         """
@@ -239,33 +269,37 @@ class SerialSendHandler:
         Generic method which handles the serial locking
         and conversion to be sent, also checks the recv
         ack from the micro to verify its correct
+        
         @param uart_command: command from micro
         @param uart_port: port command comes on
-        @return:
+        @return: uart response bytearray
         """
+        uart_response = None
+        checksum = None
+
         try:
-            ack = False
             while True:
                 # Wait until lock is accessible, then acquire
                 if LOCKS[uart_port].acquire():
                     try:
                         self.ser = serial.Serial(uart_port, self.baudrate)
                         self.ser.flushInput()
+                        self.ser.write(uart_command)
 
-                        command = bytearray.fromhex(uart_command)
+                        uart_response, checksum = read_serial_generic(self.ser)
+
                         if DEBUG:
-                            print command, uart_port
-
-                        self.ser.write(command)
-                        ba, checksum = read_serial_generic(self.ser)
-                        # TODO: Check command for response if data should be returned, ie status
-                        if ba == MICRO_ACK:
-                            print uart_port, " Ack recv"
-                            ack = True
+                            print uart_command, uart_port
+                            print 'response'
+                            print ":".join("{:02x}".format(c) for c in uart_response)
                     finally:
                         LOCKS[uart_port].release()
                     break
-            return ack
+
+            if calculate_checksum(uart_response) == ord(checksum):
+                return uart_response
+            else:
+                return None
         except serial.SerialException, e:
             logging.exception("{0} - Cannot write serial message".format(datetime.datetime.now()))
             return None
@@ -280,72 +314,202 @@ class DataHandler:
         Init serial handler
         """
         self.serial_handler = SerialSendHandler()
+        self.json_data = None
+        self.action = None
 
-    def handle_all_msg(self, uart_command):
+    def setup(self, json_data):
         """
-        Handle messages that go to all micros/ports
-        Checks to see if all ACKs are received 
+        Setup message handler with json 
+        @param json_data: incoming TCP command
+        @return: None
+        """
+        self.json_data = json_data
+        self.message_handler = message_utils.MessageHandler()
+        self.message_handler.parse_json(self.json_data)
+
+    def handle_btn(self, action):
+        """
+        Send and handle response from micro for button commands
+        for All buttons, Array of buttons or single.
+        Checks for either acknowledgement or response
+        with values to be returned in JSON
         
-        @param uart_command: incoming command to be sent to all micros
-        @return: True - ACK, False - NACK
+        @param action: incoming action (SET or GET)
+        @return: Response JSON
         """
         ack_num = 0
-        for uart_port in UART_PORTS:
-            while True:
-                if (self.serial_handler.serial_handle(uart_command, uart_port)):
+        exec_ack_num = 0
+        uart_command, uart_port = self.message_handler.run_button_cmd()
+
+        response = self.json_data
+
+        # Handle sending a command to all micros for all leds
+        if uart_port == "ALL":
+            uart_responses = []
+            for port in UART_PORTS:
+                uart_responses.append(self.serial_handler.serial_handle(uart_command, port))
+
+            for uart_response in uart_responses:
+                if uart_response == MICRO_ACK:
                     ack_num += 1
-                break
-        if ack_num == 4:
-            return True
-        else:
-            return False
 
-    def handle_arr_msg(self, uart_command):
-        """
-        Handle messages that come in as arrays
-        and send them to corresponding micro/port 
-        for each message
-        Checks to see if all ACKs are received with
-        count vs ack_num 
-        
-        @param uart_command: Incoming dict with {'port':'command'} format 
-        @return: True - ACK, False - NACK
-        """
-        ack_num = 0
+            if ack_num == 4:
+                response['action'] = '='
+                return response
 
-        count = 0
-        for uart_port, uart_commands in uart_command.iteritems():
-            count += 1
-            for single_uart_command in uart_commands:
-                if len(single_uart_command) > 0:
-                    single_command = json.dumps(single_uart_command).strip('"')
-                    if self.serial_handler.serial_handle(single_command, uart_port):
+        # Handle sending an array of led ids for certain micros
+        elif uart_port == "ARRAY":
+            uart_responses = []
+            exec_uart_responses = []
+
+            exec_command = deepcopy(EXECUTE_LED_LIST)
+            exec_command[3] = int(self.json_data['value'])
+            exec_command[4] = calculate_checksum(exec_command)
+
+            for specific_uart_port, uart_command_array in uart_command.iteritems():
+                for specific_uart_command in uart_command_array:
+                    # Get response from array command for LEDs
+                    uart_responses.append(self.serial_handler.serial_handle(specific_uart_command, specific_uart_port))
+                    # Get response from sending execute command for array of LEDs
+                    exec_uart_responses.append(self.serial_handler.serial_handle(exec_command, specific_uart_port))
+
+                # Check both sets of commands get correct number of acks back
+                for uart_response in uart_responses:
+                    if uart_response == MICRO_ACK:
                         ack_num += 1
-        if ack_num == count:
-            for uart_port, uart_commands in uart_command.iteritems():
-                count += 1
+                for uart_response in exec_uart_responses:
+                    if uart_response == MICRO_ACK:
+                        exec_ack_num += 1
+                if ack_num == len(uart_command) and exec_ack_num == len(uart_command):
+                    response['action'] = '='
+                    return response
 
-                if self.serial_handler.serial_handle(single_command, uart_port):
-                    ack_num += 1
-            return True
+        # Handle sending
+        elif uart_port in UART_PORTS:
+            uart_response = self.serial_handler.serial_handle(uart_command, uart_port)
+            if uart_response is None:
+                return error_response(1)
+            if action == 'SET':
+                if uart_response == MICRO_ACK:
+                    response['action'] = '='
+                    return response
+            else:
+                response['value'] = str(uart_response[3])
+                response['action'] = '='
+                return response
         else:
-            return False
+            return error_response(1)
+        return error_response(1)
 
-    def handle_other_msg(self, uart_command, uart_port):
+    def handle_enc(self, action):
         """
-        Handle all other messages such as single leds,
-        firmware or status messages
+        Send and handle response from micro command for
+        any encoder commands. These include display and 
+        position for where the encoder is/changed to.
         
-        @param uart_command: Incoming uart command
-        @param uart_port: Corresponding port for command
-        @return: True - ACK, False - NACK
+        @param action: incoming action (SET or GET) 
+        @return: Response JSON
         """
-        if(self.serial_handler.serial_handle(uart_command, uart_port)):
-            return True
+        uart_command, uart_port = self.message_handler.run_encoder_cmd()
+        uart_response = self.serial_handler.serial_handle(uart_command, uart_port)
+        if uart_response is None:
+            return error_response(1)
+        response = self.json_data
+        if action == 'SET':
+            if uart_response == MICRO_ACK:
+                response['action'] = '='
+                return response
         else:
-            return False
+            response['value'] = str(uart_response[3])
+            response['action'] = '='
+            return response
 
-    def allocate(self, json_data):
+    def handle_sts(self, cid):
+        """
+        Send and handle response from micro command for 
+        any status related commands. Can either be 
+        generic status of the micro or firmware versions.
+        This method ensures that all four micros have been
+        checked for both status and firmware. If all statuses
+        return with an ACK, status is okay. If all firmware versions
+        are correct, firmware returns okay with the version of 
+        all of them.
+        
+        @param cid: Component id (STS or FW)
+        @return: Response JSON
+        """
+        ack_num = 0
+        uart_command, uart_port = self.message_handler.run_status_cmd()
+        response = self.json_data
+        uart_responses = []
+        if uart_port == 'ALL':
+            for port in UART_PORTS:
+                uart_responses.append(self.serial_handler.serial_handle(uart_command, port))
+        if len(uart_responses) > 0:
+            if cid == "STS":
+                for uart_response in uart_responses:
+                    if uart_response == MICRO_ACK:
+                        ack_num += 1
+                if ack_num == 4:
+                    response['value'] = '1'
+                    response['action'] = '='
+                    return response
+            if cid == "FW":
+                if len(set([str(uart_str) for uart_str in uart_responses])) <= 1:
+                    response['value'] = FIRMWARE[str(uart_responses[0][3])]
+                    response['action'] = '='
+                    return response
+                else:
+                    response['value'] = 'xxx'
+                    response['action'] = '='
+                    return response
+        else:
+            return error_response(1)
+
+    def handle_cfg(self, action):
+        """
+        Send and handle response from micro command for
+        any configuration commands. This can include 
+        blink rates, duty cycle, etc.
+        
+        @param action: incoming action (SET or GET)
+        @return: Response JSON
+        """
+        uart_command, uart_port = self.message_handler.run_config_cmd()
+        uart_response = self.serial_handler.serial_handle(uart_command, uart_port)
+        response = self.json_data
+        if uart_response is not None:
+            if action == "SET":
+                if uart_response == MICRO_ACK:
+                    response['action'] = '='
+                    return response
+                elif uart_response[2] == message_utils.status_and_exceptions['error']:
+                    return error_response(1, self.get_error_desc(uart_response[3]))
+                else:
+                    return error_response(1)
+
+            else:
+                if uart_response[2] == message_utils.status_and_exceptions['error']:
+                    return error_response(1, self.get_error_desc(uart_response[3]))
+                else:
+                    response['value'] = str(uart_response[3])
+                    response['action'] = '='
+                    return response
+        else:
+            return error_response(1)
+
+    def get_error_desc(self, code):
+        """
+        Translate error byte code into error description
+        to be added to response json
+        @param code: Error byte code
+        @return: Description string
+        """
+        for desc, byte_code in message_utils.error_codes.iteritems():
+            if code == byte_code:
+                return desc
+
+    def allocate(self):
         """
         Allocate incoming data to corresponding function
         for further processing and micro messaging.
@@ -363,41 +527,40 @@ class DataHandler:
         response = ""
         try:
             # Ensure json is of correct format
-            if all(key in json_data for key in
+            if all(key in self.json_data for key in
                    ("action", "category", "component", "component_id", "value")):
-                msg = MessageHandler(json_data)
+                category = self.json_data['category']
+                action = self.json_data['action']
+                cid = self.json_data['component_id']
 
-                # Create command and allocate port for serial sending
-                response, (uart_command, uart_port) = msg.process_command()
+                # Handle sending micro command for configuration
+                if category == "CFG" and (action == "SET" or action == "GET"):
+                    return self.handle_cfg(action)
 
-                if response['category'] == 'ERROR':
-                    return error_response(2)[0]
+                # Handle sending micro command for status
+                elif category == "STS" and action == 'GET':
+                    return self.handle_sts(cid)
 
-                if DEBUG:
-                    print 'response:', response
-                    print 'uart com :', uart_command
-                    print 'uart port: ', uart_port
+                # Handle micro command for sending button commands
+                elif category == "BTN" and (action == 'SET' or action == 'GET'):
+                    return self.handle_btn(action)
 
-                if uart_port == "ALL":
-                    if self.handle_all_msg(uart_command):
-                        return response
-
-                elif uart_port == "ARRAY":
-                    if self.handle_arr_msg(uart_command):
-                        return response
+                # Send command for sending encoder configuration commands
+                elif category == "ENC" and (action == 'SET' or action == 'GET'):
+                    return self.handle_enc(action)
 
                 else:
-                    if self.handle_other_msg(uart_command, uart_port):
-                        return response
-
+                    return error_response(1)
             else:
                 if DEBUG:
                     print 'Returning with failure'
-                return error_response(0)[0]
+                return error_response(0)
 
         except TypeError, e:
+            if DEBUG:
+                print e
             logging.exception("{0} - Failed reading and allocating micro message".format(datetime.datetime.now()))
-            return error_response(0)[0]
+            return error_response(0)
 
 
 def tcp_handler(sock):
@@ -452,7 +615,8 @@ def tcp_handler(sock):
                             READY = True
 
                         if READY:
-                            response = data_handler.allocate(json_data)
+                            data_handler.setup(json_data)
+                            response = data_handler.allocate()
 
                             s.sendall(json.dumps(response))
                             if s not in outputs:
@@ -466,6 +630,7 @@ def tcp_handler(sock):
                         s.close()
 
     except socket.error, e:
+        print'ERROR'
         logging.exception("{0} - Failed to read data from socket".format(datetime.datetime.now()))
         return
 
@@ -483,6 +648,7 @@ class SerialReceiveHandler:
         self.gpio_fds = []
         self.sers = []
         self.setup()
+        # TODO: test this a little more? Could be fine might have to be hardened
         self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.TCP_CLIENT.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
 
@@ -491,6 +657,7 @@ class SerialReceiveHandler:
         Create new serial objects to be used to
         read incoming serial messages, append
         them to an array
+        
         @return: None
         """
         if DEBUG:
@@ -504,11 +671,13 @@ class SerialReceiveHandler:
         Send TCP through to DSP with whatever
         the micro command translates to. This is 
         generally an unsolicited message
+        
         @param unsol_msg: incoming message from micro
         @param uart_port: port being read from
         @return: True if sent, False if not
         """
-        tcp_message = handle_unsolicited(unsol_msg, uart_port)
+        # TODO: move handle_unsol somewhere else? its own module?
+        tcp_message = message_utils.handle_unsolicited(unsol_msg, uart_port)
         if DEBUG:
             print 'TCP Message: ', tcp_message
         try:
@@ -522,6 +691,7 @@ class SerialReceiveHandler:
         """
         Class method for handling checksum 
         calculation for micro commands
+        
         @param micro_cmd: incoming command
         @return: sum of the checksum mod 0x100 
         to keep it within a byte
@@ -539,6 +709,7 @@ class SerialReceiveHandler:
         or an acknowledgement depending on if 
         the incoming message was good. Sends out tcp
         message if okay, error back to micro if not.
+        
         @return: None
         """
         if DEBUG:

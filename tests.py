@@ -14,6 +14,7 @@ date           programmer         modification
 """
 import unittest
 from message_utils import *
+import globals
 import json
 from button_led_map import map_arrays
 import socket
@@ -194,35 +195,89 @@ class TestButtonMapping(unittest.TestCase):
         self.assertEquals(micro_cmd, ("E802220110EE", '/dev/ttyO1'))
     '''
 
-    def test_checksum(self):
-        cmd_chk = 'E80310050000EE'
-        cmd = 'E8031005000EE'
-        self.assertEquals(bytearray.fromhex(cmd_chk)[-2], calculate_checksum_string(cmd))
+    # def test_checksum(self):
+    #     cmd_chk = 'E80310050000EE'
+    #     cmd = 'E8031005000EE'
+    #     self.assertEquals(bytearray.fromhex(cmd_chk)[-2], calculate_checksum_string(cmd))
+    #
+    #     cmd2_chk = 'E80842010E0F1018191AABEE'
+    #     cmd2 = 'E80842010E0F1018191A0EE'
+    #     self.assertEquals(bytearray.fromhex(cmd2_chk)[-2], calculate_checksum_string(cmd2))
+    #
+    #     cmd3_chk = 'E81042010405060708090A11121314151617F8EE'
+    #     cmd3 = 'E81042010405060708090A111213141516170EE'
+    #     self.assertEquals(bytearray.fromhex(cmd3_chk)[-2], calculate_checksum_string(cmd3))
+    #
+    #     cmd4_chk = 'E80942010102030B0C0D1B79EE'
+    #     cmd4 = 'E80942010102030B0C0D1B0EE'
+    #     self.assertEquals(bytearray.fromhex(cmd4_chk)[-2], calculate_checksum_string(cmd4))
+    #
+    #     cmd5_chk = 'E80242012DEE'
+    #     cmd5 = 'E80242010EE'
+    #     self.assertEquals(bytearray.fromhex(cmd5_chk)[-2], calculate_checksum_string(cmd5))
+    #
+    #     cmd6_chk = 'E800E8EE'
+    #     cmd6 = 'E8000EE'
+    #     self.assertEquals(bytearray.fromhex(cmd6_chk)[-2], calculate_checksum_string(cmd6))
+    #
+    #     cmd7_chk = '000000'
+    #     cmd7 = '000'
+    #     self.assertEquals(bytearray.fromhex(cmd7_chk)[-2], calculate_checksum_string(cmd7))
 
-        cmd2_chk = 'E80842010E0F1018191AABEE'
-        cmd2 = 'E80842010E0F1018191A0EE'
-        self.assertEquals(bytearray.fromhex(cmd2_chk)[-2], calculate_checksum_string(cmd2))
 
-        cmd3_chk = 'E81042010405060708090A11121314151617F8EE'
-        cmd3 = 'E81042010405060708090A111213141516170EE'
-        self.assertEquals(bytearray.fromhex(cmd3_chk)[-2], calculate_checksum_string(cmd3))
+class TestCommands():
+    def test_bytearray_change(self):
+        start = 'E8'
+        length = '02'
+        cmd = '42'
+        end = 'EE'
+        # micro_cmd = bytearray([int(start, 16), int(length, 16), int(cmd, 16), int(end, 16)])
+        # print ":".join("{:02x}".format(c) for c in micro_cmd)
+        cmd = {"category": "CFG", "component": "RTE", "component_id": "SLO", "action": "GET", "value": "1"}
+        r = translate_cfg_cmd(cmd)
+        print ":".join("{:02x}".format(c) for c in r[0])
 
-        cmd4_chk = 'E80942010102030B0C0D1B79EE'
-        cmd4 = 'E80942010102030B0C0D1B0EE'
-        self.assertEquals(bytearray.fromhex(cmd4_chk)[-2], calculate_checksum_string(cmd4))
+        cmd = {"category": "BTN", "component": "LED", "component_id": "155", "action": "GET", "value": "1"}
+        r1 = translate_single_led(cmd)
+        print r1
+        print ":".join("{:02x}".format(c) for c in r1[0])
 
-        cmd5_chk = 'E80242012DEE'
-        cmd5 = 'E80242010EE'
-        self.assertEquals(bytearray.fromhex(cmd5_chk)[-2], calculate_checksum_string(cmd5))
+        cmd = {"category": "BTN", "component": "LED", "component_id": ["34", "35", "123", "203", "78", "56", "25",
+                                                                       "201", "106"], "action": "SET", "value": "1"}
+        micro_cmd = translate_led_array(cmd)
+        for port, cmd in micro_cmd[0].iteritems():
+            print ":".join("{:02x}".format(c) for c in cmd[0])
 
-        cmd6_chk = 'E800E8EE'
-        cmd6 = 'E8000EE'
-        self.assertEquals(bytearray.fromhex(cmd6_chk)[-2], calculate_checksum_string(cmd6))
+        print '-----'
 
-        cmd7_chk = '000000'
-        cmd7 = '000'
-        self.assertEquals(bytearray.fromhex(cmd7_chk)[-2], calculate_checksum_string(cmd7))
+        t = ["18","1A", "1234","150","45t", "1234","150","45", "1234","150","45", "1234","150","45",
+              "1234","150","45", "1234","150","45", "1234","150","45", "1234","45", "1234","150","45",
+              "1234","150","45", "1234","150","45", "1234","45", "1234","150","45", "1234","150","45",
+             "1234", "150", "45", "1234", "45", "1234", "150", "45", "1234", "150", "45", "1234", "150", "45", "1234",
+              "1234","150","45", "1234","45", "1234","150","45", "1234","150","45", "1234","150","45", "1234"]
 
+        cmd2 = {"category": "BTN", "component": "LED", "component_id": t, "action": "SET", "value": "1"}
+        micro_cmd2 = translate_led_array(cmd2)
 
+        for port, cmd in micro_cmd2[0].iteritems():
+            for cmd_ in cmd:
+                print ":".join("{:02x}".format(c) for c in cmd_)
+import tcp_server
+import copy
 if __name__ == '__main__':
-    unittest.main()
+    # exec_command = copy.deepcopy(globals.EXECUTE_LED_LIST)
+    # exec_command[3] = int("1")
+    # exec_command[4] = tcp_server.calculate_checksum(exec_command)
+
+    # print ":".join("{:02x}".format(c) for c in globals.EXECUTE_LED_LIST)
+    # print ":".join("{:02x}".format(c) for c in exec_command)
+    # cmd2 = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SET", "value": "100"}
+    test = "19"
+    print int(hex(int(test)).strip('0x'))
+
+
+    # for r in translate_enc_cmd(cmd2)[0]:
+    #     print "{:02x}".format(r)
+    # unittest.main()
+    # t = TestCommands()
+    # t.test_bytearray_change()

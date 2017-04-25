@@ -51,7 +51,7 @@ GPIO_EDGE_FDS = ['/sys/class/gpio/gpio71/edge', '/sys/class/gpio/gpio73/edge',
 
 CTS_GPIOS = ['P8_45', 'P8_43', 'P8_41', 'P8_39']
 
-DEBUG = False
+DEBUG = True
 DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 xUART_PORTS = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
@@ -64,3 +64,17 @@ DSP_SERVER_PORT = 65000
 MICRO_STATUS = 'E80231001BEE'
 ALL_LEDS = 'E80240F80123EE'
 ALL_LEDS_OFF = 'E80240F80022EE'
+
+FIRMWARE = {'1': '001',
+            '2': '002',
+            '3': '003',
+            '4': '004',
+            '5': '005',
+            '6': '006',
+            '7': '007'}
+
+ERROR_DESCS = ['Invalid category or component.',
+               'State (parameter) out of range',
+               'Command not understood/syntax invalid.']
+
+EXECUTE_LED_LIST = bytearray.fromhex('E802440000EE')
