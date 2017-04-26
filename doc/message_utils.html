@@ -15,13 +15,7 @@ DESCRIPTION:&nbsp;Set&nbsp;of&nbsp;utility&nbsp;functions&nbsp;used&nbsp;for&nbs
 and&nbsp;processing&nbsp;the&nbsp;messages&nbsp;that&nbsp;come&nbsp;from&nbsp;the&nbsp;DSP&nbsp;and&nbsp;require<br>
 manipulation&nbsp;before&nbsp;sending&nbsp;to&nbsp;micros.<br>
 &nbsp;<br>
-WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier<br>
-&nbsp;<br>
-MODIFICATION&nbsp;HISTORY:<br>
-&nbsp;<br>
-date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;programmer&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modification<br>
------------------------------------------------<br>
-1/25/17&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;JDP&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;original</tt></p>
+WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier</tt></p>
 <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
@@ -38,33 +32,47 @@ date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;programmer
 <td colspan=3 valign=bottom>&nbsp;<br>
 <font color="#000000" face="helvetica, arial"><a name="MessageHandler">class <strong>MessageHandler</strong></a></font></td></tr>
     
-<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Class&nbsp;to&nbsp;handle&nbsp;allocation&nbsp;of&nbsp;certain&nbsp;commands&nbsp;in&nbsp;category<br>
+&nbsp;<br>
+Categories:<br>
+Configuration<br>
+LED/Switch<br>
+Encoder<br>
+Status<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
 <dl><dt><a name="MessageHandler-__init__"><strong>__init__</strong></a>(self)</dt></dl>
 
-<dl><dt><a name="MessageHandler-parse_json"><strong>parse_json</strong></a>(self, json_request)</dt></dl>
+<dl><dt><a name="MessageHandler-parse_json"><strong>parse_json</strong></a>(self, json_request)</dt><dd><tt>Splits&nbsp;up&nbsp;tcp&nbsp;dsp&nbsp;json&nbsp;into&nbsp;class&nbsp;variables<br>
+&nbsp;<br>
+@param&nbsp;json_request:&nbsp;incoming&nbsp;dsp&nbsp;JSON&nbsp;<br>
+@return:&nbsp;None</tt></dd></dl>
 
 <dl><dt><a name="MessageHandler-run_button_cmd"><strong>run_button_cmd</strong></a>(self)</dt><dd><tt>Run&nbsp;command&nbsp;with&nbsp;a&nbsp;single&nbsp;LED,&nbsp;Switch&nbsp;or&nbsp;list<br>
 of&nbsp;LEDs&nbsp;or&nbsp;Switches,&nbsp;or&nbsp;using&nbsp;ALL&nbsp;which<br>
 results&nbsp;in&nbsp;all&nbsp;LEDs&nbsp;turning&nbsp;on.&nbsp;This&nbsp;command&nbsp;will<br>
 split&nbsp;and&nbsp;allocate&nbsp;all&nbsp;incoming&nbsp;panel_ids&nbsp;into&nbsp;&lt;16<br>
 len&nbsp;arrays<br>
-@return:&nbsp;tuple&nbsp;of&nbsp;format:<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tcp_response,&nbsp;(micro&nbsp;command,&nbsp;uart&nbsp;port)</tt></dd></dl>
+&nbsp;<br>
+@return:&nbsp;tuple&nbsp;of&nbsp;format:&nbsp;micro&nbsp;command,&nbsp;uart&nbsp;port</tt></dd></dl>
 
 <dl><dt><a name="MessageHandler-run_config_cmd"><strong>run_config_cmd</strong></a>(self)</dt><dd><tt>Run&nbsp;the&nbsp;set&nbsp;of&nbsp;config&nbsp;commands,&nbsp;which<br>
 include&nbsp;firmware&nbsp;and&nbsp;status.<br>
+&nbsp;<br>
 @return:&nbsp;FW&nbsp;or&nbsp;status&nbsp;response</tt></dd></dl>
 
 <dl><dt><a name="MessageHandler-run_encoder_cmd"><strong>run_encoder_cmd</strong></a>(self)</dt><dd><tt>Run&nbsp;the&nbsp;set&nbsp;of&nbsp;encoder&nbsp;commands,&nbsp;which<br>
 include&nbsp;changing&nbsp;the&nbsp;sensitivity&nbsp;as&nbsp;well<br>
 as&nbsp;the&nbsp;position&nbsp;of&nbsp;the&nbsp;encoder<br>
+&nbsp;<br>
 @return:&nbsp;Encoder&nbsp;response&nbsp;to&nbsp;DSP</tt></dd></dl>
 
 <dl><dt><a name="MessageHandler-run_status_cmd"><strong>run_status_cmd</strong></a>(self)</dt><dd><tt>Run&nbsp;the&nbsp;status&nbsp;command&nbsp;on&nbsp;the&nbsp;system.<br>
 Runs&nbsp;status_utils&nbsp;check_status&nbsp;method&nbsp;which<br>
 checks&nbsp;memory&nbsp;availability&nbsp;as&nbsp;well&nbsp;as&nbsp;other<br>
 key&nbsp;system&nbsp;status&nbsp;reports<br>
+&nbsp;<br>
 @return:&nbsp;Status&nbsp;command&nbsp;response&nbsp;to&nbsp;DSP</tt></dd></dl>
 
 </td></tr></table></td></tr></table><p>
@@ -80,6 +88,7 @@ For&nbsp;example,&nbsp;if&nbsp;the&nbsp;array&nbsp;has&nbsp;a&nbsp;set&nbsp;of&n
 are&nbsp;all&nbsp;in&nbsp;different&nbsp;micros,&nbsp;this&nbsp;will&nbsp;allocated&nbsp;a<br>
 dict&nbsp;with&nbsp;the&nbsp;micro&nbsp;the&nbsp;message&nbsp;should&nbsp;be&nbsp;sent&nbsp;to.<br>
 This&nbsp;corresponds&nbsp;to&nbsp;the&nbsp;set&nbsp;of&nbsp;arrays&nbsp;in&nbsp;button_led_map.py<br>
+&nbsp;<br>
 @param&nbsp;command:&nbsp;DSP&nbsp;cmd&nbsp;with&nbsp;array&nbsp;of&nbsp;panel_ids<br>
 @return:&nbsp;Dict&nbsp;with&nbsp;format:<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
@@ -91,69 +100,82 @@ This&nbsp;corresponds&nbsp;to&nbsp;the&nbsp;set&nbsp;of&nbsp;arrays&nbsp;in&nbsp
 micro&nbsp;command&nbsp;that&nbsp;is&nbsp;from&nbsp;an&nbsp;<br>
 unsolicited&nbsp;command&nbsp;and&nbsp;is&nbsp;of&nbsp;the&nbsp;<br>
 form&nbsp;byte&nbsp;array<br>
+&nbsp;<br>
 @param&nbsp;micro_cmd:&nbsp;<br>
 @return:&nbsp;checksum</tt></dd></dl>
  <dl><dt><a name="-calculate_length"><strong>calculate_length</strong></a>(micro_cmd)</dt><dd><tt>Calculates&nbsp;length&nbsp;of&nbsp;micro&nbsp;commmand<br>
 by&nbsp;look&nbsp;at&nbsp;size&nbsp;after&nbsp;length,&nbsp;up&nbsp;to&nbsp;<br>
 checksum<br>
+&nbsp;<br>
 @param&nbsp;micro_cmd:&nbsp;<br>
 @return:&nbsp;length&nbsp;of&nbsp;command</tt></dd></dl>
  <dl><dt><a name="-check_fw_or_status"><strong>check_fw_or_status</strong></a>(json_command)</dt><dd><tt>Method&nbsp;to&nbsp;build&nbsp;micro&nbsp;command<br>
 to&nbsp;check&nbsp;both&nbsp;firmware&nbsp;and&nbsp;status<br>
 of&nbsp;the&nbsp;micros.<br>
+&nbsp;<br>
 @param&nbsp;request:&nbsp;<br>
 @return:&nbsp;micro&nbsp;command,&nbsp;uart&nbsp;ports</tt></dd></dl>
  <dl><dt><a name="-finalize_cmd"><strong>finalize_cmd</strong></a>(micro_cmd)</dt><dd><tt>Takes&nbsp;command&nbsp;that&nbsp;is&nbsp;outgoing&nbsp;to&nbsp;<br>
 micro&nbsp;and&nbsp;injects&nbsp;both&nbsp;checksum&nbsp;and<br>
 length&nbsp;in&nbsp;the&nbsp;final&nbsp;command&nbsp;to&nbsp;be&nbsp;<br>
 sent&nbsp;out<br>
+&nbsp;<br>
 @param&nbsp;micro_cmd:&nbsp;<br>
 @return:&nbsp;final&nbsp;micro&nbsp;command</tt></dd></dl>
  <dl><dt><a name="-handle_unsolicited"><strong>handle_unsolicited</strong></a>(micro_command, uart_port)</dt><dd><tt>Handles&nbsp;incoming&nbsp;unsolicited&nbsp;commands<br>
 from&nbsp;the&nbsp;micro.&nbsp;First&nbsp;checks&nbsp;checksum<br>
 then&nbsp;builds&nbsp;a&nbsp;tcp&nbsp;command&nbsp;to&nbsp;be&nbsp;sent<br>
 to&nbsp;DSP<br>
+&nbsp;<br>
 @param&nbsp;micro_command:<br>
 @param&nbsp;uart_port:&nbsp;<br>
 @return:&nbsp;TCP&nbsp;command&nbsp;for&nbsp;dsp</tt></dd></dl>
  <dl><dt><a name="-split_id_array"><strong>split_id_array</strong></a>(id_array)</dt><dd><tt>Yields&nbsp;set&nbsp;of&nbsp;size&nbsp;16&nbsp;arrays&nbsp;from&nbsp;individual<br>
 longer&nbsp;array<br>
+&nbsp;<br>
 @param&nbsp;id_array:&nbsp;incoming&nbsp;&gt;16&nbsp;len&nbsp;array<br>
 @return:&nbsp;Generator&nbsp;of&nbsp;arrays</tt></dd></dl>
  <dl><dt><a name="-translate_all_led"><strong>translate_all_led</strong></a>()</dt><dd><tt>Translate&nbsp;the&nbsp;command&nbsp;for&nbsp;all&nbsp;LEDs<br>
 into&nbsp;the&nbsp;proper&nbsp;micro&nbsp;command<br>
+&nbsp;<br>
 @param&nbsp;command:&nbsp;incoming&nbsp;json&nbsp;command&nbsp;from&nbsp;DSP<br>
 @return:&nbsp;String&nbsp;micro&nbsp;command</tt></dd></dl>
  <dl><dt><a name="-translate_cfg_cmd"><strong>translate_cfg_cmd</strong></a>(json_command)</dt><dd><tt>Translated&nbsp;incoming&nbsp;DSP&nbsp;json&nbsp;command&nbsp;to&nbsp;a<br>
 more&nbsp;condensed&nbsp;version&nbsp;to&nbsp;be&nbsp;sent&nbsp;to&nbsp;the&nbsp;micro<br>
 as&nbsp;a&nbsp;possible&nbsp;set&nbsp;of&nbsp;bytes/ascii&nbsp;chars.&nbsp;Will&nbsp;be<br>
 updated&nbsp;for&nbsp;new&nbsp;protocol&nbsp;between&nbsp;bb&nbsp;and&nbsp;micros<br>
+&nbsp;<br>
 @param&nbsp;json_command:&nbsp;DSP&nbsp;json&nbsp;command<br>
 @return:&nbsp;new&nbsp;micro&nbsp;command</tt></dd></dl>
  <dl><dt><a name="-translate_enc_cmd"><strong>translate_enc_cmd</strong></a>(command)</dt><dd><tt>Translated&nbsp;incoming&nbsp;DSP&nbsp;json&nbsp;command&nbsp;to&nbsp;a<br>
 more&nbsp;condensed&nbsp;version&nbsp;to&nbsp;be&nbsp;sent&nbsp;to&nbsp;the&nbsp;micro<br>
 as&nbsp;a&nbsp;possible&nbsp;set&nbsp;of&nbsp;bytes/ascii&nbsp;chars.&nbsp;<br>
+&nbsp;<br>
 @param&nbsp;command:&nbsp;DSP&nbsp;json&nbsp;command<br>
 @return:&nbsp;new&nbsp;micro&nbsp;command</tt></dd></dl>
  <dl><dt><a name="-translate_led_array"><strong>translate_led_array</strong></a>(json_command)</dt><dd><tt>Takes&nbsp;incoming&nbsp;json_command&nbsp;with&nbsp;an&nbsp;array&nbsp;of&nbsp;BTN&nbsp;IDs<br>
 and&nbsp;splits&nbsp;them&nbsp;into&nbsp;messages&nbsp;that&nbsp;contain&nbsp;a&nbsp;maximum<br>
 of&nbsp;16&nbsp;len&nbsp;BTN&nbsp;ids,&nbsp;and&nbsp;put&nbsp;them&nbsp;to&nbsp;the&nbsp;corresponding<br>
 micro&nbsp;based&nbsp;on&nbsp;the&nbsp;logical&nbsp;ids&nbsp;for&nbsp;each&nbsp;id.<br>
+&nbsp;<br>
 @param&nbsp;json_command:&nbsp;DSP&nbsp;cmd&nbsp;with&nbsp;array&nbsp;of&nbsp;panel_ids<br>
 @return:&nbsp;Dict&nbsp;with&nbsp;uart&nbsp;ports&nbsp;and&nbsp;strings&nbsp;for&nbsp;micro<br>
 commands</tt></dd></dl>
  <dl><dt><a name="-translate_logical_id"><strong>translate_logical_id</strong></a>(component_id)</dt><dd><tt>Simple&nbsp;method&nbsp;to&nbsp;translate&nbsp;between&nbsp;panel&nbsp;id&nbsp;and<br>
 logical&nbsp;ids&nbsp;for&nbsp;each&nbsp;micro.&nbsp;Each&nbsp;panel&nbsp;id<br>
 corresponds&nbsp;to&nbsp;a&nbsp;certain&nbsp;id&nbsp;within&nbsp;each&nbsp;set&nbsp;of<br>
+&nbsp;<br>
 micros&nbsp;and&nbsp;is&nbsp;defined&nbsp;in&nbsp;map_arrays&nbsp;in&nbsp;button_led_map.py<br>
 @param&nbsp;component_id:&nbsp;Incoming&nbsp;id<br>
 @return:&nbsp;Logical&nbsp;ID</tt></dd></dl>
  <dl><dt><a name="-translate_single_led"><strong>translate_single_led</strong></a>(json_command)</dt><dd><tt>Translate&nbsp;the&nbsp;command&nbsp;for&nbsp;a&nbsp;single&nbsp;LED<br>
 into&nbsp;the&nbsp;proper&nbsp;micro&nbsp;command<br>
+&nbsp;<br>
 @param&nbsp;command:&nbsp;incoming&nbsp;json&nbsp;command&nbsp;from&nbsp;DSP<br>
 @return:&nbsp;String&nbsp;micro&nbsp;command</tt></dd></dl>
  <dl><dt><a name="-translate_uart_port"><strong>translate_uart_port</strong></a>(panel_id)</dt><dd><tt>Simple&nbsp;method&nbsp;to&nbsp;translate&nbsp;between&nbsp;map_arrays<br>
 and&nbsp;the&nbsp;incoming&nbsp;panel_id&nbsp;for&nbsp;micro&nbsp;number<br>
+&nbsp;<br>
 @param&nbsp;panel_id:&nbsp;ID&nbsp;from&nbsp;DSP&nbsp;for&nbsp;panel&nbsp;number<br>
 @return:&nbsp;Micro&nbsp;number&nbsp;for&nbsp;panel&nbsp;id</tt></dd></dl>
 </td></tr></table><p>

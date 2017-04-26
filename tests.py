@@ -102,7 +102,6 @@ class TestButtonMapping(unittest.TestCase):
     def test_slow_dcyc_command(self):
         cmd = {"category": "CFG", "component": "CYC", "component_id": "SLO", "action": "SET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)
-        # print ":".join("{:02x}".format(c) for c in micro_cmd[0]['/dev/ttyO1'][0])
         self.assertEquals(micro_cmd, (bytearray.fromhex("E80224010FEE"), '/dev/ttyO1'))
         cmd = {"category": "CFG", "component": "CYC", "component_id": "SLO", "action": "GET", "value": "1"}
         micro_cmd = translate_cfg_cmd(cmd)

@@ -26,6 +26,7 @@ import os
 import datetime
 from globals import *
 from copy import deepcopy
+import Adafruit_BBIO.GPIO as GPIO
 
 
 uart_lock1 = Lock()
@@ -58,7 +59,6 @@ class StartUpTester:
         """
         Init all serial ports and setup serial connections
         """
-        # self.uart_ports = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
         self.uart_ports = UART_PORTS
         self.sers = []
         self.baudrate = 115200
@@ -647,10 +647,8 @@ class SerialReceiveHandler:
         self.ser = None
         self.gpio_fds = []
         self.sers = []
+        self.tcp_client = None
         self.setup()
-        # TODO: test this a little more? Could be fine might have to be hardened
-        self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.TCP_CLIENT.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
 
     def setup(self):
         """
@@ -666,6 +664,10 @@ class SerialReceiveHandler:
             new_ser = serial.Serial(uart, 115200)
             self.sers.append(new_ser)
 
+    def setup_client(self):
+        self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_client.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
+
     def send_tcp(self, unsol_msg, uart_port):
         """
         Send TCP through to DSP with whatever
@@ -677,11 +679,12 @@ class SerialReceiveHandler:
         @return: True if sent, False if not
         """
         # TODO: move handle_unsol somewhere else? its own module?
+        self.setup_client()
         tcp_message = message_utils.handle_unsolicited(unsol_msg, uart_port)
         if DEBUG:
             print 'TCP Message: ', tcp_message
         try:
-            self.TCP_CLIENT.send(json.dumps(tcp_message))
+            self.tcp_client.send(json.dumps(tcp_message))
         except socket.error, e:
             logging.exception("{0} - Failed to send TCP message".format(datetime.datetime.now()))
             return False
@@ -722,7 +725,7 @@ class SerialReceiveHandler:
                 if DEBUG:
                     print 'Checksum: ', c, ord(checksum)
                 if c == ord(checksum):
-                    if self.send_tcp(str(ba), self.ser.port):
+                    if self.send_tcp(ba, self.ser.port):
                         self.ser.write(MICRO_ACK)
                     else:
                         self.ser.write(MICRO_ERR)
@@ -846,9 +849,9 @@ if __name__ == "__main__":
     serial_thread.daemon = True
     serial_thread.start()
 
-    # startup_thread = threading.Thread(target=startup_worker)
-    # startup_thread.daemon = True
-    # startup_thread.start()
+    startup_thread = threading.Thread(target=startup_worker)
+    startup_thread.daemon = True
+    startup_thread.start()
 
     server_address = (HOST, int(PORT))
     print 'Starting server on:', server_address

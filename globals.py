@@ -51,7 +51,7 @@ GPIO_EDGE_FDS = ['/sys/class/gpio/gpio71/edge', '/sys/class/gpio/gpio73/edge',
 
 CTS_GPIOS = ['P8_45', 'P8_43', 'P8_41', 'P8_39']
 
-DEBUG = True
+DEBUG = False
 DEV_UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2']
 UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 xUART_PORTS = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']

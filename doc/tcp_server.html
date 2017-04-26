@@ -77,6 +77,11 @@ Other&nbsp;-&nbsp;Command&nbsp;falls&nbsp;into&nbsp;other&nbsp;category,&nbsp;in
 @param&nbsp;json_data:&nbsp;Incoming&nbsp;json&nbsp;data&nbsp;from&nbsp;TCP&nbsp;handler<br>
 @return:&nbsp;Response&nbsp;to&nbsp;be&nbsp;sent&nbsp;back&nbsp;through&nbsp;TCP&nbsp;to&nbsp;dsp</tt></dd></dl>
 
+<dl><dt><a name="DataHandler-get_error_desc"><strong>get_error_desc</strong></a>(self, code)</dt><dd><tt>Translate&nbsp;error&nbsp;byte&nbsp;code&nbsp;into&nbsp;error&nbsp;description<br>
+to&nbsp;be&nbsp;added&nbsp;to&nbsp;response&nbsp;json<br>
+@param&nbsp;code:&nbsp;Error&nbsp;byte&nbsp;code<br>
+@return:&nbsp;Description&nbsp;string</tt></dd></dl>
+
 <dl><dt><a name="DataHandler-handle_btn"><strong>handle_btn</strong></a>(self, action)</dt><dd><tt>Send&nbsp;and&nbsp;handle&nbsp;response&nbsp;from&nbsp;micro&nbsp;for&nbsp;button&nbsp;commands<br>
 for&nbsp;All&nbsp;buttons,&nbsp;Array&nbsp;of&nbsp;buttons&nbsp;or&nbsp;single.<br>
 Checks&nbsp;for&nbsp;either&nbsp;acknowledgement&nbsp;or&nbsp;response<br>
@@ -271,7 +276,7 @@ well&nbsp;as&nbsp;used.&nbsp;This&nbsp;could&nbsp;be&nbsp;used&nbsp;for&nbsp;deb
 during&nbsp;development&nbsp;or&nbsp;triage&nbsp;during&nbsp;use.<br>
 &nbsp;<br>
 @return:&nbsp;None</tt></dd></dl>
- <dl><dt><a name="-error_response"><strong>error_response</strong></a>(error_id)</dt><dd><tt>Error&nbsp;handler&nbsp;and&nbsp;builder<br>
+ <dl><dt><a name="-error_response"><strong>error_response</strong></a>(error_id, extra_data<font color="#909090">=''</font>)</dt><dd><tt>Error&nbsp;handler&nbsp;and&nbsp;builder<br>
 &nbsp;<br>
 @param&nbsp;error_id:&nbsp;ID&nbsp;of&nbsp;error<br>
 @return:&nbsp;Error&nbsp;response&nbsp;in&nbsp;JSON&nbsp;format</tt></dd></dl>
@@ -320,6 +325,7 @@ more&nbsp;than&nbsp;5.<br>
 <strong>DSP_SERVER_IP</strong> = '192.168.255.88'<br>
 <strong>DSP_SERVER_PORT</strong> = 65000<br>
 <strong>ERROR_DESCS</strong> = ['Invalid category or component.', 'State (parameter) out of range', 'Command not understood/syntax invalid.']<br>
+<strong>EXECUTE_LED_LIST</strong> = bytearray(b'\xe8\x02D\x00\x00\xee')<br>
 <strong>FIRMWARE</strong> = {'1': '001', '2': '002', '3': '003', '4': '004', '5': '005', '6': '006', '7': '007'}<br>
 <strong>GPIO_EDGE_FDS</strong> = ['/sys/class/gpio/gpio71/edge', '/sys/class/gpio/gpio73/edge', '/sys/class/gpio/gpio75/edge', '/sys/class/gpio/gpio77/edge']<br>
 <strong>LOCKS</strong> = {'/dev/ttyO1': &lt;thread.lock object&gt;, '/dev/ttyO2': &lt;thread.lock object&gt;, '/dev/ttyO4': &lt;thread.lock object&gt;, '/dev/ttyO5': &lt;thread.lock object&gt;}<br>
