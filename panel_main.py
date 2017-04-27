@@ -1,5 +1,5 @@
 """
-FILE:   tcp_server.py
+FILE:   panel_main.py
 DESCRIPTION: TCP server module which runs on boot and handles incoming
 messages from the DSP through TCP connection.
 
@@ -13,6 +13,7 @@ WRITTEN BY: Jake Poirier
 
 import json
 import message_utils
+import unsolicited_utils
 import button_led_map
 import argparse
 import threading
@@ -39,10 +40,11 @@ LOCKS = {'/dev/ttyO1': uart_lock1,
          '/dev/ttyO4': uart_lock4,
          '/dev/ttyO5': uart_lock5}
 
-if DEBUG:
-    READY = True
-else:
-    READY = False
+# if DEBUG:
+#     READY = True
+# else:
+#     READY = False
+READY = False
 
 
 class StartUpTester:
@@ -85,7 +87,6 @@ class StartUpTester:
                  2 - either checksum or ack not correct/received
         """
         ba, checksum = read_serial_generic(ser)
-
         c = calculate_checksum(ba)
 
         if c == ord(checksum) and str(ba) == MICRO_ACK:
@@ -104,6 +105,7 @@ class StartUpTester:
         """
         micro_ack = 0
         for ser in self.sers:
+            print ser
             if DEBUG:
                 print 'Current serial connection:', ser
             ser.write(bytearray.fromhex(micro_cmd))
@@ -128,7 +130,7 @@ class StartUpTester:
             print 'Done\nStarting lightup sequence..'
             if self.send_command(ALL_LEDS):
                 print 'Done'
-                time.sleep(5)
+                time.sleep(2)
                 print 'Stopping lighting sequence..'
                 self.send_command(ALL_LEDS_OFF)
                 return True
@@ -146,11 +148,11 @@ class StartUpTester:
         for led in button_led_map.map_arrays['panel']:
             if not READY:
                 ser = self.sers[button_led_map.map_arrays['micro'][led-1]]
-                cmd = 'E8024001{0:0{1}X}00EE'.format(button_led_map.map_arrays['logical'][led-1], 2)
-                chk = calculate_checksum(bytearray.fromhex(cmd))
-                cmd = cmd[:-4] + str(hex(chk)[2:]) + cmd[-2:]
-                cmd = bytearray.fromhex(cmd)
-
+                cmd = bytearray([0xE8, 0x02, 0x40, 0x01])
+                cmd.append(button_led_map.map_arrays['logical'][led-1])
+                cmd.append(0x00)
+                cmd.append(0xEE)
+                cmd[-2] = calculate_checksum(cmd)
                 ser.write(cmd)
                 time.sleep(.01)
 
@@ -502,6 +504,7 @@ class DataHandler:
         """
         Translate error byte code into error description
         to be added to response json
+        
         @param code: Error byte code
         @return: Description string
         """
@@ -598,8 +601,12 @@ def tcp_handler(sock):
             for s in readable:
                 if s is sock:
                     connection, client_address = s.accept()
+                    if not READY:
+                        connection.sendall(json.dumps(STATUS_TCP))
+                        READY = True
                     if DEBUG:
                         print 'Connect', client_address
+                        print 'READY', READY
                     connection.setblocking(0)
                     inputs.append(connection)
                 else:
@@ -609,10 +616,6 @@ def tcp_handler(sock):
                             json_data = json.loads(data.replace(",}", "}"), encoding='utf8')
                         except Exception as e:
                             return error_response(0)[0]
-
-                        # Check for basic status command to kick out of startup sequence
-                        if json_data['category'] == 'STS' and json_data['component'] == 'SYS':
-                            READY = True
 
                         if READY:
                             data_handler.setup(json_data)
@@ -665,6 +668,11 @@ class SerialReceiveHandler:
             self.sers.append(new_ser)
 
     def setup_client(self):
+        """
+        Setup tcp client to handle outgoing messages
+        
+        @return: None
+        """
         self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_client.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
 
@@ -678,15 +686,18 @@ class SerialReceiveHandler:
         @param uart_port: port being read from
         @return: True if sent, False if not
         """
-        # TODO: move handle_unsol somewhere else? its own module?
         self.setup_client()
-        tcp_message = message_utils.handle_unsolicited(unsol_msg, uart_port)
-        if DEBUG:
-            print 'TCP Message: ', tcp_message
-        try:
-            self.tcp_client.send(json.dumps(tcp_message))
-        except socket.error, e:
-            logging.exception("{0} - Failed to send TCP message".format(datetime.datetime.now()))
+        unsolicited_handler = unsolicited_utils.UnsolicitedHandler()
+        tcp_message = unsolicited_handler.allocate_command(unsol_msg, uart_port)
+        if tcp_message is not None:
+            if DEBUG:
+                print 'TCP Message: ', tcp_message
+            try:
+                self.tcp_client.send(json.dumps(tcp_message))
+            except socket.error, e:
+                logging.exception("{0} - Failed to send TCP message".format(datetime.datetime.now()))
+                return False
+        else:
             return False
         return True
 
@@ -782,7 +793,8 @@ class SerialReceiveHandler:
 
             for gpio_edge_fd in GPIO_EDGE_FDS:
                 fd = open(gpio_edge_fd, 'w')
-                fd.write("both")
+                # TODO: make sure this is what rts is actually doing (rising/falling)
+                fd.write("rising")
 
             for fd in self.gpio_fds:
                 vals.append(fd.read())
