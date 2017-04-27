@@ -6,13 +6,7 @@ manipulation before sending to micros.
 
 WRITTEN BY: Jake Poirier
 
-MODIFICATION HISTORY:
-
-date           programmer         modification
------------------------------------------------
-1/25/17          JDP                original
 """
-from copy import deepcopy
 from button_led_map import *
 from command_map import *
 
@@ -24,6 +18,7 @@ def translate_uart_port(panel_id):
     """
     Simple method to translate between map_arrays
     and the incoming panel_id for micro number
+    
     @param panel_id: ID from DSP for panel number
     @return: Micro number for panel id
     """
@@ -35,6 +30,7 @@ def translate_logical_id(component_id):
     Simple method to translate between panel id and
     logical ids for each micro. Each panel id
     corresponds to a certain id within each set of
+    
     micros and is defined in map_arrays in button_led_map.py
     @param component_id: Incoming id
     @return: Logical ID
@@ -46,6 +42,7 @@ def split_id_array(id_array):
     """
     Yields set of size 16 arrays from individual
     longer array
+    
     @param id_array: incoming >16 len array
     @return: Generator of arrays
     """
@@ -61,6 +58,7 @@ def allocate_micro_cmds(json_command):
     are all in different micros, this will allocated a
     dict with the micro the message should be sent to.
     This corresponds to the set of arrays in button_led_map.py
+    
     @param command: DSP cmd with array of panel_ids
     @return: Dict with format:
            
@@ -79,7 +77,7 @@ def allocate_micro_cmds(json_command):
         try:
             if int(cid) < len(map_arrays['micro']):
                 micro_num = map_arrays['micro'][(int(cid))-1]
-                micro_commands['micro_' + str(micro_num)].append(cid)
+                micro_commands['micro_' + str(micro_num)].append(translate_logical_id(cid))
         except:
             continue
     return micro_commands
@@ -90,6 +88,7 @@ def calculate_length(micro_cmd):
     Calculates length of micro commmand
     by look at size after length, up to 
     checksum
+    
     @param micro_cmd: 
     @return: length of command 
     """
@@ -102,6 +101,7 @@ def calculate_checksum_bytes(micro_cmd):
     micro command that is from an 
     unsolicited command and is of the 
     form byte array
+    
     @param micro_cmd: 
     @return: checksum
     """
@@ -117,6 +117,7 @@ def finalize_cmd(micro_cmd):
     micro and injects both checksum and
     length in the final command to be 
     sent out
+    
     @param micro_cmd: 
     @return: final micro command 
     """
@@ -133,6 +134,7 @@ def translate_led_array(json_command):
     and splits them into messages that contain a maximum
     of 16 len BTN ids, and put them to the corresponding
     micro based on the logical ids for each id.
+    
     @param json_command: DSP cmd with array of panel_ids
     @return: Dict with uart ports and strings for micro
     commands
@@ -191,6 +193,7 @@ def translate_all_led():
     """
     Translate the command for all LEDs
     into the proper micro command
+    
     @param command: incoming json command from DSP
     @return: String micro command
     """
@@ -210,9 +213,11 @@ def translate_cfg_cmd(json_command):
     more condensed version to be sent to the micro
     as a possible set of bytes/ascii chars. Will be
     updated for new protocol between bb and micros
+    
     @param json_command: DSP json command
     @return: new micro command
     """
+    # TODO: add in pwm duty cycle and period for mikes protocol
     comp = json_command['component']
     cid = json_command['component_id']
     action = json_command['action']
@@ -255,6 +260,7 @@ def translate_enc_cmd(command):
     Translated incoming DSP json command to a
     more condensed version to be sent to the micro
     as a possible set of bytes/ascii chars. 
+    
     @param command: DSP json command
     @return: new micro command
     """
@@ -287,6 +293,7 @@ def translate_single_led(json_command):
     """
     Translate the command for a single LED
     into the proper micro command
+    
     @param command: incoming json command from DSP
     @return: String micro command
     """
@@ -318,6 +325,7 @@ def check_fw_or_status(json_command):
     Method to build micro command
     to check both firmware and status
     of the micros.
+    
     @param request: 
     @return: micro command, uart ports
     """
@@ -332,93 +340,26 @@ def check_fw_or_status(json_command):
     return micro_cmd, 'ALL'
 
 
-def handle_unsolicited(micro_command, uart_port):
-    """
-    Handles incoming unsolicited commands
-    from the micro. First checks checksum
-    then builds a tcp command to be sent
-    to DSP
-    @param micro_command:
-    @param uart_port: 
-    @return: TCP command for dsp 
-    """
-    # TODO: Exception codes for any unsolicited exception
-    for b in micro_command:
-        print ord(b)
-
-    cmd = ord(micro_command[2])
-    checksum = ord(micro_command[-2])
-    print hex(checksum)
-
-    cs = calculate_checksum_bytes(micro_command)
-    print hex(cs)
-    tcp_command = {}
-    if checksum == cs:
-        if cmd == 0x10:
-            micro_button_number = ord(micro_command[3])
-            if DEBUG:
-                print ":".join("{:02x}".format(ord(c)) for c in micro_command)
-
-            button_index = micro_array[uart_port]['logical'].index(micro_button_number)
-            panel_button_number = micro_array[uart_port]['panel'][button_index]
-
-            value = ord(micro_command[4])
-            tcp_command = {'category': 'BTN',
-                           'component': 'SW',
-                           'component_id': panel_button_number,
-                           'action': '=',
-                           'value': value}
-
-        elif cmd == 0x11:
-            value = ord(micro_command[3])
-            tcp_command = {'category': 'ENC',
-                           'component': 'POS',
-                           'component_id': '0',
-                           'action': '=',
-                           'value': value}
-
-        elif cmd == 0xF0:
-            value = ord(micro_command[3])
-            desc = ""
-            for description, byte_code in error_codes.iteritems():
-                if value == byte_code:
-                    desc = description
-            tcp_command = {'category': 'ERROR',
-                           'component': '',
-                           'component_id': '',
-                           'action': '=',
-                           'value': value,
-                           'description': desc}
-
-        elif cmd == 0x90:
-            value = ord(micro_command[3])
-            desc = ""
-            for description, byte_code in exception_codes.iteritems():
-                if value == byte_code:
-                    desc = description
-            tcp_command = {'category': 'EXCEPTION',
-                           'component': '',
-                           'component_id': '',
-                           'action': '=',
-                           'value': value,
-                           'description': desc}
-
-        elif cmd == 0x80:
-            tcp_command = {'category': 'ACK',
-                           'component': '',
-                           'component_id': '',
-                           'action': '=',
-                           'value': ''}
-
-    return tcp_command
-
-
 class MessageHandler:
-
+    """
+    Class to handle allocation of certain commands in category
+     
+    Categories:
+    Configuration
+    LED/Switch
+    Encoder
+    Status
+    """
     def __init__(self):
         pass
 
     def parse_json(self, json_request):
+        """
+        Splits up tcp dsp json into class variables
+        
+        @param json_request: incoming dsp JSON 
+        @return: None
+        """
         self.json_request = json_request
         self.category = self.json_request['category']
         self.component = self.json_request['component']
@@ -430,6 +371,7 @@ class MessageHandler:
         """
         Run the set of config commands, which
         include firmware and status.
+        
         @return: FW or status response
         """
         micro_command, uart_port = translate_cfg_cmd(self.json_request)
@@ -440,6 +382,7 @@ class MessageHandler:
         Run the set of encoder commands, which
         include changing the sensitivity as well
         as the position of the encoder
+        
         @return: Encoder response to DSP
         """
         micro_command, uart_port = translate_enc_cmd(self.json_request)
@@ -451,6 +394,7 @@ class MessageHandler:
         Runs status_utils check_status method which
         checks memory availability as well as other
         key system status reports
+        
         @return: Status command response to DSP
         """
         if self.json_request['component_id'] == "FW" or self.json_request['component_id'] == "STS":
@@ -466,8 +410,8 @@ class MessageHandler:
         results in all LEDs turning on. This command will
         split and allocate all incoming panel_ids into <16
         len arrays
-        @return: tuple of format:
-                    tcp_response, (micro command, uart port)
+        
+        @return: tuple of format: micro command, uart port
 
         """
         if self.component == 'LED' and isinstance(self.component_id, list):

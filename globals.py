@@ -24,25 +24,10 @@ GPIO.setup('P8_42', GPIO.IN)
 GPIO.setup('P8_44', GPIO.IN)
 GPIO.setup('P8_46', GPIO.IN)
 
-GPIO.setup('USR0', GPIO.OUT)
-GPIO.setup('USR1', GPIO.OUT)
-GPIO.setup('USR2', GPIO.OUT)
-GPIO.setup('USR3', GPIO.OUT)
-#
 GPIO.output("P8_39", GPIO.LOW)
 GPIO.output("P8_41", GPIO.LOW)
 GPIO.output("P8_43", GPIO.LOW)
 GPIO.output("P8_45", GPIO.LOW)
-
-# GPIO.output("P8_40", GPIO.LOW)
-# GPIO.output("P8_42", GPIO.LOW)
-# GPIO.output("P8_44", GPIO.LOW)
-# GPIO.output("P8_46", GPIO.LOW)
-
-# GPIO.add_event_detect("P8_40", GPIO.BOTH)
-# GPIO.add_event_detect("P8_42", GPIO.BOTH)
-# GPIO.add_event_detect("P8_44", GPIO.BOTH)
-# GPIO.add_event_detect("P8_46", GPIO.BOTH)
 
 RTS_GPIOS = ['/sys/class/gpio/gpio71/value', '/sys/class/gpio/gpio73/value',
              '/sys/class/gpio/gpio75/value', '/sys/class/gpio/gpio77/value']
@@ -76,5 +61,8 @@ FIRMWARE = {'1': '001',
 ERROR_DESCS = ['Invalid category or component.',
                'State (parameter) out of range',
                'Command not understood/syntax invalid.']
+
+STATUS_TCP = {"category": "STS", "component": "SYS",
+              "component_id": "STS", "action": "=", "value": "1"}
 
 EXECUTE_LED_LIST = bytearray.fromhex('E802440000EE')

@@ -2,7 +2,6 @@ import serial
 import time
 from button_led_map import map_arrays
 import os
-from tcp_server import START_LOCK
 
 DEBUG = False
 MICRO_STATUS = 'E80231001BEE'

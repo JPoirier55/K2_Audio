@@ -1,0 +1,124 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module unsolicited_utils</title>
+<meta charset="utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>unsolicited_utils</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/debian/K2_Audio/unsolicited_utils.py">/home/debian/K2_Audio/unsolicited_utils.py</a></font></td></tr></table>
+    <p><tt>FILE:&nbsp;&nbsp;&nbsp;unsolicited_utils.py<br>
+&nbsp;<br>
+DESCRIPTION:&nbsp;Module&nbsp;to&nbsp;handle&nbsp;all&nbsp;unsolicited&nbsp;translations&nbsp;between<br>
+micro&nbsp;commands&nbsp;nad&nbsp;tcp&nbsp;packets&nbsp;set&nbsp;to&nbsp;dsp<br>
+&nbsp;<br>
+WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="Adafruit_BBIO.GPIO.html">Adafruit_BBIO.GPIO</a><br>
+</td><td width="25%" valign=top></td><td width="25%" valign=top></td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="unsolicited_utils.html#UnsolicitedHandler">UnsolicitedHandler</a>
+</font></dt></dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="UnsolicitedHandler">class <strong>UnsolicitedHandler</strong></a></font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Handler&nbsp;for&nbsp;all&nbsp;unsolicited&nbsp;commands&nbsp;from&nbsp;micro<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="UnsolicitedHandler-__init__"><strong>__init__</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="UnsolicitedHandler-allocate_command"><strong>allocate_command</strong></a>(self, micro_command, uart_port)</dt><dd><tt>Looks&nbsp;at&nbsp;third&nbsp;byte&nbsp;of&nbsp;micro_command&nbsp;to&nbsp;see&nbsp;what&nbsp;<br>
+command&nbsp;has&nbsp;been&nbsp;sent&nbsp;from&nbsp;micro,&nbsp;and&nbsp;handles<br>
+accordingly.<br>
+&nbsp;<br>
+@param&nbsp;micro_command:&nbsp;incoming&nbsp;command&nbsp;bytearray&nbsp;from&nbsp;micro<br>
+@param&nbsp;uart_port:&nbsp;port&nbsp;command&nbsp;coming&nbsp;in&nbsp;on<br>
+@return:&nbsp;True&nbsp;-&nbsp;message&nbsp;handl</tt></dd></dl>
+
+<dl><dt><a name="UnsolicitedHandler-handle_encoder_change"><strong>handle_encoder_change</strong></a>(self)</dt><dd><tt>Handles&nbsp;any&nbsp;micro&nbsp;commands&nbsp;from&nbsp;encoder<br>
+and&nbsp;returns&nbsp;tcp&nbsp;json&nbsp;commmand&nbsp;to&nbsp;dsp<br>
+&nbsp;<br>
+@return:&nbsp;TCP&nbsp;JSON&nbsp;command</tt></dd></dl>
+
+<dl><dt><a name="UnsolicitedHandler-handle_exception"><strong>handle_exception</strong></a>(self)</dt><dd><tt>Handles&nbsp;any&nbsp;unsolicited&nbsp;micro&nbsp;exceptions<br>
+and&nbsp;looks&nbsp;up&nbsp;correct&nbsp;exception&nbsp;id&nbsp;to&nbsp;add<br>
+the&nbsp;description&nbsp;to&nbsp;the&nbsp;tcp&nbsp;json&nbsp;command<br>
+&nbsp;<br>
+@return:&nbsp;TCP&nbsp;JSON&nbsp;command</tt></dd></dl>
+
+<dl><dt><a name="UnsolicitedHandler-handle_switch_press"><strong>handle_switch_press</strong></a>(self)</dt><dd><tt>Handle&nbsp;unsolicited&nbsp;switch&nbsp;presses&nbsp;from&nbsp;micro,<br>
+converts&nbsp;logical&nbsp;id&nbsp;from&nbsp;micro&nbsp;into&nbsp;panel&nbsp;id<br>
+for&nbsp;dsp<br>
+&nbsp;<br>
+@return:&nbsp;TCP&nbsp;JSON&nbsp;command</tt></dd></dl>
+
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-calculate_checksum_bytes"><strong>calculate_checksum_bytes</strong></a>(micro_cmd)</dt><dd><tt>Calculates&nbsp;checksum&nbsp;of&nbsp;incoming<br>
+micro&nbsp;command&nbsp;that&nbsp;is&nbsp;from&nbsp;an&nbsp;<br>
+unsolicited&nbsp;command&nbsp;and&nbsp;is&nbsp;of&nbsp;the&nbsp;<br>
+form&nbsp;byte&nbsp;array<br>
+&nbsp;<br>
+@param&nbsp;micro_cmd:&nbsp;<br>
+@return:&nbsp;checksum</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>ALL_LEDS</strong> = 'E80240F80123EE'<br>
+<strong>ALL_LEDS_OFF</strong> = 'E80240F80022EE'<br>
+<strong>BB_ACK</strong> = bytearray(b'E8018069EE')<br>
+<strong>CTS_GPIOS</strong> = ['P8_45', 'P8_43', 'P8_41', 'P8_39']<br>
+<strong>DEBUG</strong> = True<br>
+<strong>DEV_UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2']<br>
+<strong>DSP_SERVER_IP</strong> = '192.168.255.88'<br>
+<strong>DSP_SERVER_PORT</strong> = 65000<br>
+<strong>ERROR_DESCS</strong> = ['Invalid category or component.', 'State (parameter) out of range', 'Command not understood/syntax invalid.']<br>
+<strong>EXECUTE_LED_LIST</strong> = bytearray(b'\xe8\x02D\x00\x00\xee')<br>
+<strong>FIRMWARE</strong> = {'1': '001', '2': '002', '3': '003', '4': '004', '5': '005', '6': '006', '7': '007'}<br>
+<strong>GPIO_EDGE_FDS</strong> = ['/sys/class/gpio/gpio71/edge', '/sys/class/gpio/gpio73/edge', '/sys/class/gpio/gpio75/edge', '/sys/class/gpio/gpio77/edge']<br>
+<strong>MICRO_ACK</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
+<strong>MICRO_ERR</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
+<strong>MICRO_STATUS</strong> = 'E80231001BEE'<br>
+<strong>RTS_GPIOS</strong> = ['/sys/class/gpio/gpio71/value', '/sys/class/gpio/gpio73/value', '/sys/class/gpio/gpio75/value', '/sys/class/gpio/gpio77/value']<br>
+<strong>STATUS_TCP</strong> = {'action': '=', 'category': 'STS', 'component': 'SYS', 'component_id': 'STS', 'value': '1'}<br>
+<strong>UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']<br>
+<strong>button_actions</strong> = {'fast_flash_green': 3, 'fast_flash_red': 6, 'flash_red_green': 7, 'off': 0, 'slow_flash_green': 2, 'slow_flash_red': 5, 'solid_green': 1, 'solid_red': 4}<br>
+<strong>button_numbers</strong> = {'all': 248, 'center_group': 241, 'semicircle': 240, 'upper_left_group': 243, 'upper_right_group': 242}<br>
+<strong>command_dict</strong> = {'execute_led_list': 67, 'get_enc_disp': 81, 'get_enc_pos': 83, 'get_enc_sens': 41, 'get_fw_version': 51, 'get_led_button': 65, 'get_led_fast_dcyc': 39, 'get_led_fast_rate': 35, 'get_led_slow_dcyc': 37, 'get_led_slow_rate': 33, ...}<br>
+<strong>error_codes</strong> = {'bad_checksum': 132, 'bad_start_char': 130, 'bad_stop_char': 133, 'incorrect_length': 18, 'invalid_command': 17, 'invalid_length': 131, 'invalid_parameter': 19, 'rx_buffer_overflow': 135, 'rx_message_timeout': 136, 'rx_misc_error': 129, ...}<br>
+<strong>exception_codes</strong> = {'button_stuck_on': 48, 'high_low_3.3v': 35, 'high_low_5v': 33, 'marginal_3.3v': 34, 'marginal_5v': 32, 'other_reset_occurred': 17, 'power_up_reset_occurred': 16}<br>
+<strong>map_arrays</strong> = {'logical': [4, 10, 16, 26, 32, 44, 46, 41, 35, 29, 13, 7, 1, 0, 6, 12, 28, 34, 40, 47, ...], 'micro': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, ...], 'panel': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...], 'pcb_conn': ['J2A', 'J2A', 'J2A', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2B', 'J2A', 'J2A', 'J2A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', 'J3A', ...]}<br>
+<strong>micro_array</strong> = {'/dev/ttyO1': {'logical': [2, 5, 7, 13, 15, 17, 20, 1, 3, 6, 12, 16, 19, 21, 0, 4, 11, 18, 22, 9, ...], 'panel': [145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 200, ...]}, '/dev/ttyO2': {'logical': [4, 10, 16, 26, 32, 44, 46, 41, 35, 29, 13, 7, 1, 2, 8, 14, 20, 24, 30, 38, ...], 'panel': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 27, 28, 29, 30, 31, 32, 33, ...]}, '/dev/ttyO4': {'logical': [0, 6, 12, 28, 34, 40, 47, 45, 33, 27, 17, 11, 5, 2, 8, 14, 18, 22, 30, 36, ...], 'panel': [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 44, 45, 46, 47, 48, 49, 50, ...]}, '/dev/ttyO5': {'logical': [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 58, 56, 54, 52, 50, ...], 'panel': [107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, ...]}}<br>
+<strong>start_char</strong> = 232<br>
+<strong>status_and_exceptions</strong> = {'ack': 128, 'encoder_pos_change': 17, 'error': 240, 'exception': 144, 'get_enc_disp': 81, 'get_enc_pos': 83, 'get_enc_sens': 41, 'get_fw_version': 51, 'get_led_button': 65, 'get_led_fast_dcyc': 39, ...}<br>
+<strong>stop_char</strong> = 238<br>
+<strong>xUART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']</td></tr></table>
+</body></html>
