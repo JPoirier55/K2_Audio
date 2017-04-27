@@ -217,6 +217,7 @@ def translate_cfg_cmd(json_command):
     @param json_command: DSP json command
     @return: new micro command
     """
+    # TODO: add in pwm duty cycle and period for mikes protocol
     comp = json_command['component']
     cid = json_command['component_id']
     action = json_command['action']
@@ -337,94 +338,6 @@ def check_fw_or_status(json_command):
 
     micro_cmd = finalize_cmd(micro_cmd)
     return micro_cmd, 'ALL'
-
-
-def handle_unsolicited(micro_command, uart_port):
-    """
-    Handles incoming unsolicited commands
-    from the micro. First checks checksum
-    then builds a tcp command to be sent
-    to DSP
-    
-    @param micro_command:
-    @param uart_port: 
-    @return: TCP command for dsp 
-    """
-    # TODO: Exception codes for any unsolicited exception
-    print 'in msg utils'
-    for b in micro_command:
-        print b
-
-    cmd = micro_command[2]
-    checksum = micro_command[-2]
-    print 'checksum:', checksum
-    try:
-        cs = calculate_checksum_bytes(micro_command)
-    except:
-        print 'cant get cs'
-    print 'cs: ', cs
-    tcp_command = {}
-
-    if checksum == cs:
-
-        if cmd == 0x10:
-            print 'led command unsol'
-            micro_button_number = micro_command[3]
-            if DEBUG:
-                print ":".join("{:02x}".format(c) for c in micro_command)
-
-            button_index = micro_array[uart_port]['logical'].index(micro_button_number)
-            panel_button_number = micro_array[uart_port]['panel'][button_index]
-
-            value = micro_command[4]
-            tcp_command = {'category': 'BTN',
-                           'component': 'SW',
-                           'component_id': str(panel_button_number),
-                           'action': '=',
-                           'value': str(value)}
-
-        elif cmd == 0x11:
-            value = micro_command[3]
-            tcp_command = {'category': 'ENC',
-                           'component': 'POS',
-                           'component_id': '0',
-                           'action': '=',
-                           'value': str(value)}
-
-        elif cmd == 0xF0:
-            value = micro_command[3]
-            desc = ""
-            for description, byte_code in error_codes.iteritems():
-                if value == byte_code:
-                    desc = description
-            tcp_command = {'category': 'ERROR',
-                           'component': '',
-                           'component_id': '',
-                           'action': '=',
-                           'value': str(value),
-                           'description': desc}
-
-        elif cmd == 0x90:
-            value = micro_command[3]
-            desc = ""
-            for description, byte_code in exception_codes.iteritems():
-                if value == byte_code:
-                    desc = description
-            tcp_command = {'category': 'EXCEPTION',
-                           'component': '',
-                           'component_id': '',
-                           'action': '=',
-                           'value': str(value),
-                           'description': desc}
-
-        elif cmd == 0x80:
-            tcp_command = {'category': 'ACK',
-                           'component': '',
-                           'component_id': '',
-                           'action': '=',
-                           'value': ''}
-
-    return tcp_command
 
 
 class MessageHandler:
