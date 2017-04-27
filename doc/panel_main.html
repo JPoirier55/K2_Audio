@@ -1,16 +1,16 @@
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<html><head><title>Python: module tcp_server</title>
+<html><head><title>Python: module panel_main</title>
 <meta charset="utf-8">
 </head><body bgcolor="#f0f0f8">
 
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
 <tr bgcolor="#7799ee">
 <td valign=bottom>&nbsp;<br>
-<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>tcp_server</strong></big></big></font></td
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>panel_main</strong></big></big></font></td
 ><td align=right valign=bottom
-><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/debian/K2_Audio/tcp_server.pyc">/home/debian/K2_Audio/tcp_server.pyc</a></font></td></tr></table>
-    <p><tt>FILE:&nbsp;&nbsp;&nbsp;tcp_server.py<br>
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/debian/K2_Audio/panel_main.py">/home/debian/K2_Audio/panel_main.py</a></font></td></tr></table>
+    <p><tt>FILE:&nbsp;&nbsp;&nbsp;panel_main.py<br>
 DESCRIPTION:&nbsp;TCP&nbsp;server&nbsp;module&nbsp;which&nbsp;runs&nbsp;on&nbsp;boot&nbsp;and&nbsp;handles&nbsp;incoming<br>
 messages&nbsp;from&nbsp;the&nbsp;DSP&nbsp;through&nbsp;TCP&nbsp;connection.<br>
 &nbsp;<br>
@@ -39,6 +39,7 @@ WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier</tt></p>
 <a href="socket.html">socket</a><br>
 <a href="threading.html">threading</a><br>
 </td><td width="25%" valign=top><a href="time.html">time</a><br>
+<a href="unsolicited_utils.html">unsolicited_utils</a><br>
 </td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
@@ -47,10 +48,10 @@ WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier</tt></p>
     
 <tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%"><dl>
-<dt><font face="helvetica, arial"><a href="tcp_server.html#DataHandler">DataHandler</a>
-</font></dt><dt><font face="helvetica, arial"><a href="tcp_server.html#SerialReceiveHandler">SerialReceiveHandler</a>
-</font></dt><dt><font face="helvetica, arial"><a href="tcp_server.html#SerialSendHandler">SerialSendHandler</a>
-</font></dt><dt><font face="helvetica, arial"><a href="tcp_server.html#StartUpTester">StartUpTester</a>
+<dt><font face="helvetica, arial"><a href="panel_main.html#DataHandler">DataHandler</a>
+</font></dt><dt><font face="helvetica, arial"><a href="panel_main.html#SerialReceiveHandler">SerialReceiveHandler</a>
+</font></dt><dt><font face="helvetica, arial"><a href="panel_main.html#SerialSendHandler">SerialSendHandler</a>
+</font></dt><dt><font face="helvetica, arial"><a href="panel_main.html#StartUpTester">StartUpTester</a>
 </font></dt></dl>
  <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
@@ -177,6 +178,8 @@ read&nbsp;incoming&nbsp;serial&nbsp;messages,&nbsp;append<br>
 them&nbsp;to&nbsp;an&nbsp;array<br>
 &nbsp;<br>
 @return:&nbsp;None</tt></dd></dl>
+
+<dl><dt><a name="SerialReceiveHandler-setup_client"><strong>setup_client</strong></a>(self)</dt></dl>
 
 </td></tr></table> <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
@@ -332,7 +335,7 @@ more&nbsp;than&nbsp;5.<br>
 <strong>MICRO_ACK</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
 <strong>MICRO_ERR</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
 <strong>MICRO_STATUS</strong> = 'E80231001BEE'<br>
-<strong>READY</strong> = True<br>
+<strong>READY</strong> = False<br>
 <strong>RTS_GPIOS</strong> = ['/sys/class/gpio/gpio71/value', '/sys/class/gpio/gpio73/value', '/sys/class/gpio/gpio75/value', '/sys/class/gpio/gpio77/value']<br>
 <strong>STATUS_TCP</strong> = {'action': '=', 'category': 'STS', 'component': 'SYS', 'component_id': 'STS', 'value': '1'}<br>
 <strong>UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']<br>
