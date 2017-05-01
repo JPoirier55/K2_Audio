@@ -654,6 +654,7 @@ class SerialReceiveHandler:
         self.gpio_fds = []
         self.sers = []
         self.tcp_client = None
+        self.baudrate = 115200
         self.setup()
 
     def setup(self):
@@ -667,7 +668,7 @@ class SerialReceiveHandler:
         if DEBUG:
             print 'Setting up Serial connections'
         for uart in self.uart_ports:
-            new_ser = serial.Serial(uart, 115200)
+            new_ser = serial.Serial(uart, self.baudrate)
             self.sers.append(new_ser)
 
     def setup_client(self):
@@ -732,7 +733,7 @@ class SerialReceiveHandler:
         if DEBUG:
             print "Serial connection: ", self.ser
         try:
-            # TODO: use except to catch issues, return error message
+            # TODO: use except to catch issues, return error message, harden returning error message to micro
             ba, checksum = read_serial_generic(self.ser)
             if ba is not None:
                 c = self.calculate_checksum(ba)

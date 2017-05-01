@@ -252,6 +252,9 @@ class TestButtonMapping(unittest.TestCase):
         json_data = {"category": "BTN", "component": "LED", "component_id": "155", "action": "SET", "value": "67"}
         dh.setup(json_data)
         self.assertEquals(dh.allocate()['category'], 'ERROR')
+        json_data = {"category": "BTN", "component": "LED", "component_id": "12355", "action": "SET", "value": "6"}
+        dh.setup(json_data)
+        self.assertEquals(dh.allocate()['category'], 'ERROR')
 
     def test_datahandler_enc_errors(self):
         dh = DataHandler()
@@ -264,9 +267,10 @@ class TestButtonMapping(unittest.TestCase):
         json_data = {"category": "ENC", "component": "DISt", "component_id": "0", "action": "SET", "value": "1"}
         dh.setup(json_data)
         self.assertEquals(dh.allocate()['category'], 'ERROR')
-        json_data = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "LET", "value": "1"}
+        json_data = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SET", "value": "1"}
         dh.setup(json_data)
         self.assertEquals(dh.allocate()['category'], 'ERROR')
+
 
 if __name__ == '__main__':
     unittest.main()
