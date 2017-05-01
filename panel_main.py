@@ -321,7 +321,7 @@ class DataHandler:
 
     def setup(self, json_data):
         """
-        Setup message handler with json 
+        Setup message handler object with all data from json data 
         @param json_data: incoming TCP command
         @return: None
         """
@@ -413,18 +413,21 @@ class DataHandler:
         @return: Response JSON
         """
         uart_command, uart_port = self.message_handler.run_encoder_cmd()
-        uart_response = self.serial_handler.serial_handle(uart_command, uart_port)
-        if uart_response is None:
-            return error_response(1)
-        response = self.json_data
-        if action == 'SET':
-            if uart_response == MICRO_ACK:
+        if uart_command is not None:
+            uart_response = self.serial_handler.serial_handle(uart_command, uart_port)
+            if uart_response is None:
+                return error_response(1)
+            response = self.json_data
+            if action == 'SET':
+                if uart_response == MICRO_ACK:
+                    response['action'] = '='
+                    return response
+            else:
+                response['value'] = str(uart_response[3])
                 response['action'] = '='
                 return response
         else:
-            response['value'] = str(uart_response[3])
-            response['action'] = '='
-            return response
+            return error_response(1)
 
     def handle_sts(self, cid):
         """
@@ -601,12 +604,12 @@ def tcp_handler(sock):
             for s in readable:
                 if s is sock:
                     connection, client_address = s.accept()
+                    # TODO: check to see if micros are ready before sending status ready tcp?
                     if not READY:
                         connection.sendall(json.dumps(STATUS_TCP))
                         READY = True
                     if DEBUG:
                         print 'Connect', client_address
-                        print 'READY', READY
                     connection.setblocking(0)
                     inputs.append(connection)
                 else:
@@ -651,6 +654,7 @@ class SerialReceiveHandler:
         self.gpio_fds = []
         self.sers = []
         self.tcp_client = None
+        self.baudrate = 115200
         self.setup()
 
     def setup(self):
@@ -664,7 +668,7 @@ class SerialReceiveHandler:
         if DEBUG:
             print 'Setting up Serial connections'
         for uart in self.uart_ports:
-            new_ser = serial.Serial(uart, 115200)
+            new_ser = serial.Serial(uart, self.baudrate)
             self.sers.append(new_ser)
 
     def setup_client(self):
@@ -729,7 +733,7 @@ class SerialReceiveHandler:
         if DEBUG:
             print "Serial connection: ", self.ser
         try:
-            # TODO: use except to catch issues, return error message
+            # TODO: use except to catch issues, return error message, harden returning error message to micro
             ba, checksum = read_serial_generic(self.ser)
             if ba is not None:
                 c = self.calculate_checksum(ba)
@@ -800,6 +804,7 @@ class SerialReceiveHandler:
                 vals.append(fd.read())
 
             readable, writable, exceptional = select.select([], [], self.gpio_fds, 5)
+            # Read all file descriptors in exceptional for gpios for rts
             for e in exceptional:
                 if e == self.gpio_fds[0]:
                     if int(vals[0]) == 1:

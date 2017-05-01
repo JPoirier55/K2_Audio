@@ -36,7 +36,6 @@ class UnsolicitedHandler:
     def __init__(self):
         self.micro_command = None
         self.uart_port = None
-        pass
 
     def allocate_command(self, micro_command, uart_port):
         """
@@ -53,14 +52,10 @@ class UnsolicitedHandler:
 
         cmd = self.micro_command[2]
         checksum = self.micro_command[-2]
-        if DEBUG:
-            print 'checksum:', checksum
-            for b in self.micro_command:
-                print b
+
         try:
             cs = calculate_checksum_bytes(self.micro_command)
         except:
-            print 'cant get cs'
             return None
 
         if checksum == cs:
@@ -82,8 +77,8 @@ class UnsolicitedHandler:
         @return: TCP JSON command 
         """
         micro_button_number = self.micro_command[3]
-        if DEBUG:
-            print ":".join("{:02x}".format(c) for c in self.micro_command)
+        # if DEBUG:
+        #     print ":".join("{:02x}".format(c) for c in self.micro_command)
 
         button_index = micro_array[self.uart_port]['logical'].index(micro_button_number)
         panel_button_number = micro_array[self.uart_port]['panel'][button_index]

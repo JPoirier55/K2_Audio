@@ -176,7 +176,6 @@ def translate_led_array(json_command):
 
             # Handle array that is less than 16 for one micro
             else:
-                print len(cid_array)
                 for id in cid_array:
                     micro_cmd.append(int(id))
                 for i in range(16 - len(cid_array)):
@@ -244,6 +243,10 @@ def translate_cfg_cmd(json_command):
         command_byte = command_dict['set_enc_sens']
     elif comp == 'ENC' and cid == 'SEN' and action == 'GET':
         command_byte = command_dict['get_enc_sens']
+    elif comp == 'PWM' and cid == 'CYC' and action == 'SET':
+        command_byte = command_dict['set_led_pwm_dcyc']
+    elif comp == 'PWM' and cid == 'PER' and action == 'SET':
+        command_byte = command_dict['set_led_pwm_period']
     else:
         return None, None
 
@@ -265,9 +268,14 @@ def translate_enc_cmd(command):
     @return: new micro command
     """
     comp = command['component']
-    value = command['value']
     action = command['action']
-    parameters = int(hex(int(value))[2:], 16)
+    try:
+        value = int(command['value'])
+        parameters = int(hex(int(value))[2:], 16)
+        if value > 100:
+            return None, None
+    except:
+        return None, None
 
     if comp == 'DIS' and action == 'SET':
         command_byte = command_dict['set_enc_disp']
@@ -414,6 +422,13 @@ class MessageHandler:
         @return: tuple of format: micro command, uart port
 
         """
+        try:
+            value = int(self.json_request['value'])
+            if value > 7:
+                return None, None
+        except:
+            return None, None
+
         if self.component == 'LED' and isinstance(self.component_id, list):
             micro_command, uart_port = translate_led_array(self.json_request)
             return micro_command, uart_port
