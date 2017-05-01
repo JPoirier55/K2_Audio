@@ -14,6 +14,9 @@ date           programmer         modification
 """
 import unittest
 from message_utils import *
+from unsolicited_utils import *
+from button_led_map import *
+from panel_main import *
 
 TEST_CMD = {'category': 'BTN',
             'component': 'LED',
@@ -170,6 +173,100 @@ class TestButtonMapping(unittest.TestCase):
 
         cmd7 = '000000'
         self.assertEquals(bytearray.fromhex(cmd7)[-2], calculate_checksum_bytes(bytearray.fromhex(cmd7)))
+
+    def test_unsolicited_exception(self):
+        unsol_handler = UnsolicitedHandler()
+        unsol_handler.allocate_command(bytearray.fromhex('E80290209AEE'), '/dev/ttyO1')
+        tcp_message = unsol_handler.handle_exception()
+        self.assertEquals(tcp_message['value'], '32')
+        self.assertEquals(tcp_message['description'], 'marginal_5v')
+
+        unsol_handler.allocate_command(bytearray.fromhex('E80290118BEE'), '/dev/ttyO1')
+        tcp_message = unsol_handler.handle_exception()
+        self.assertEquals(tcp_message['value'], '17')
+        self.assertEquals(tcp_message['description'], 'other_reset_occurred')
+
+    def test_unsolicited_switch(self):
+        unsol_handler = UnsolicitedHandler()
+        tcp_message = unsol_handler.allocate_command(bytearray.fromhex('E80310050101EE'), '/dev/ttyO1')
+        self.assertEquals(tcp_message['value'], '1')
+        self.assertEquals(tcp_message['component_id'], '146')
+
+    def test_uart1_switches(self):
+        unsol_handler = UnsolicitedHandler()
+        for i in range(0, 23):
+            cmd = bytearray.fromhex('E80310{0:0{1}X}0101EE'.format(i, 2))
+            cmd = finalize_cmd(cmd)
+            tcp_message = unsol_handler.allocate_command(cmd, '/dev/ttyO1')
+            self.assertEquals(tcp_message['value'], '1')
+            index = micro_array['/dev/ttyO1']['logical'].index(i)
+            self.assertEquals(tcp_message['component_id'], str(micro_array['/dev/ttyO1']['panel'][index]))
+
+    def test_uart2_switches(self):
+        unsol_handler = UnsolicitedHandler()
+        for i in range(0, 60):
+            cmd = bytearray.fromhex('E80310{0:0{1}X}0101EE'.format(i, 2))
+            cmd = finalize_cmd(cmd)
+            tcp_message = unsol_handler.allocate_command(cmd, '/dev/ttyO2')
+            index = micro_array['/dev/ttyO2']['logical'].index(i)
+            self.assertEquals(tcp_message['component_id'], str(micro_array['/dev/ttyO2']['panel'][index]))
+
+    def test_uart4_switches(self):
+        unsol_handler = UnsolicitedHandler()
+        for i in range(0, 60):
+            cmd = bytearray.fromhex('E80310{0:0{1}X}0101EE'.format(i, 2))
+            cmd = finalize_cmd(cmd)
+            tcp_message = unsol_handler.allocate_command(cmd, '/dev/ttyO4')
+            self.assertEquals(tcp_message['value'], '1')
+            index = micro_array['/dev/ttyO4']['logical'].index(i)
+            self.assertEquals(tcp_message['component_id'], str(micro_array['/dev/ttyO4']['panel'][index]))
+
+    def test_uart5_switches(self):
+        unsol_handler = UnsolicitedHandler()
+        for i in range(0, 60):
+            cmd = bytearray.fromhex('E80310{0:0{1}X}0101EE'.format(i, 2))
+            cmd = finalize_cmd(cmd)
+            tcp_message = unsol_handler.allocate_command(cmd, '/dev/ttyO5')
+            self.assertEquals(tcp_message['value'], '1')
+            index = micro_array['/dev/ttyO5']['logical'].index(i)
+            self.assertEquals(tcp_message['component_id'], str(micro_array['/dev/ttyO5']['panel'][index]))
+
+    def test_finalize_function(self):
+        ba = bytearray([start_char, 0x00, 0x21, 0x01, 0x00, stop_char])
+        ba = finalize_cmd(ba)
+        self.assertEquals(ba, bytearray.fromhex('E80221010CEE'))
+
+    def test_wrong_finalize(self):
+        ba = bytearray([start_char, 0x02, 0x21, 0x01, 0x00, stop_char])
+        ba = finalize_cmd(ba)
+        self.assertNotEqual(ba, bytearray.fromhex('E80321010CEE'))
+
+    def test_datahandler_btn_errors(self):
+        dh = DataHandler()
+        json_data = {"category": "BTN$", "component": "LED", "component_id": "155", "action": "SET", "value": "1"}
+        dh.setup(json_data)
+        self.assertEquals(dh.allocate()['category'], 'ERROR')
+        json_data = {"category": "BTN", "component": "LE5D", "component_id": "155", "action": "SET", "value": "1"}
+        dh.setup(json_data)
+        self.assertEquals(dh.allocate()['category'], 'ERROR')
+        json_data = {"category": "BTN", "component": "LED", "component_id": "155", "action": "SET", "value": "67"}
+        dh.setup(json_data)
+        self.assertEquals(dh.allocate()['category'], 'ERROR')
+
+    def test_datahandler_enc_errors(self):
+        dh = DataHandler()
+        json_data = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SETu", "value": "1"}
+        dh.setup(json_data)
+        self.assertEquals(dh.allocate()['category'], 'ERROR')
+        json_data = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "SET", "value": "er"}
+        dh.setup(json_data)
+        self.assertEquals(dh.allocate()['category'], 'ERROR')
+        json_data = {"category": "ENC", "component": "DISt", "component_id": "0", "action": "SET", "value": "1"}
+        dh.setup(json_data)
+        self.assertEquals(dh.allocate()['category'], 'ERROR')
+        json_data = {"category": "ENC", "component": "DIS", "component_id": "0", "action": "LET", "value": "1"}
+        dh.setup(json_data)
+        self.assertEquals(dh.allocate()['category'], 'ERROR')
 
 if __name__ == '__main__':
     unittest.main()
