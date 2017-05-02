@@ -10,6 +10,9 @@ WRITTEN BY: Jake Poirier
 from globals import *
 from button_led_map import *
 from command_map import *
+import sys
+import logging
+import datetime
 DEBUG = True
 
 
@@ -79,10 +82,8 @@ class UnsolicitedHandler:
         micro_button_number = self.micro_command[3]
         # if DEBUG:
         #     print ":".join("{:02x}".format(c) for c in self.micro_command)
-
         button_index = micro_array[self.uart_port]['logical'].index(micro_button_number)
         panel_button_number = micro_array[self.uart_port]['panel'][button_index]
-
         value = self.micro_command[4]
         tcp_command = {'category': 'BTN',
                        'component': 'SW',
@@ -114,15 +115,25 @@ class UnsolicitedHandler:
         
         @return: TCP JSON command
         """
-        value = self.micro_command[3]
+        length = self.micro_command[1]
+        exception_code = self.micro_command[3]
+
+        if length > 2:
+            parameter = self.micro_command[4]
+            if exception_code == exception_codes['button_stuck_on']:
+                index = micro_array[self.uart_port]['logical'].index(parameter)
+                parameter = micro_array[self.uart_port]['panel'][index]
+        else:
+            parameter = ""
+
         desc = ""
         for description, byte_code in exception_codes.iteritems():
-            if value == byte_code:
+            if exception_code == byte_code:
                 desc = description
         tcp_command = {'category': 'EXCEPTION',
                        'component': '',
                        'component_id': '',
                        'action': '=',
-                       'value': str(value),
+                       'value': str(parameter),
                        'description': desc}
         return tcp_command
