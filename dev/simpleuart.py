@@ -2,6 +2,7 @@ import serial
 import Adafruit_BBIO.GPIO as GPIO
 import select
 import time
+import sys
 
 GPIO.setup('P8_39', GPIO.OUT)
 GPIO.setup('P8_40', GPIO.IN)
@@ -18,168 +19,82 @@ GPIO.output('P8_43', GPIO.LOW)
 GPIO.output('P8_45', GPIO.LOW)
 
 
-# #
-# GPIO.add_event_detect("P8_40", GPIO.BOTH)
-# GPIO.add_event_detect("P8_42", GPIO.BOTH)
-# GPIO.add_event_detect("P8_44", GPIO.BOTH)
-# GPIO.add_event_detect("P8_46", GPIO.BOTH)
+RTS = ['P8_45', 'P8_43', 'P8_41', 'P8_39']
+CTS = ['P8_46', 'P8_44', 'P8_42', 'P8_40']
+UARTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 
-# RTS_GPIOS = ['/sys/class/gpio/gpio70/value', '/sys/class/gpio/gpio72/value',
-#              '/sys/class/gpio/gpio74/value', '/sys/class/gpio/gpio76/value']
-# RTS_GPIO_EDGE_FDS = ['/sys/class/gpio/gpio70/edge', '/sys/class/gpio/gpio72/edge',
-#                      '/sys/class/gpio/gpio74/edge', '/sys/class/gpio/gpio76/edge']
-#
-#
-# CTS_GPIOS = ['/sys/class/gpio/gpio71/value', '/sys/class/gpio/gpio73/value',
-#              '/sys/class/gpio/gpio75/value', '/sys/class/gpio/gpio77/value']
-# CTS_GPIO_EDGE_FDS = ['/sys/class/gpio/gpio71/edge', '/sys/class/gpio/gpio73/edge',
-#                      '/sys/class/gpio/gpio75/edge', '/sys/class/gpio/gpio77/edge']
-#
-# ser = serial.Serial('/dev/ttyO4', 115200)
-#
-# ser.write(bytearray.fromhex('E80242010255EE'))
-# while True:
-#     print ser.read(1)
-
-# def serial_worker():
-#     """
-#     Serial thread which listens for incoming
-#     unsolicted messages
-#     @return:
-#     """
-#     gpio_fds = []
-#     vals = []
-#     while True:
-#
-#         for gpio in CTS_GPIOS:
-#             open_file = open(gpio)
-#             gpio_fds.append(open_file)
-#
-#         for gpio_edge_fd in CTS_GPIO_EDGE_FDS:
-#             fd = open(gpio_edge_fd, 'w')
-#             fd.write("both")
-#
-#         for fd in gpio_fds:
-#             vals.append(fd.read())
-#
-#         readable, writable, exceptional = select.select([], [], gpio_fds, 5)
-#         for e in exceptional:
-#             if e == gpio_fds[0]:
-#                 if int(vals[0]) == 1:
-#                     print 'gpio 0'
-#
-#             elif e == gpio_fds[1]:
-#                 if int(vals[1]) == 1:
-#                     print 'gpio 1'
-#
-#             elif e == gpio_fds[2]:
-#                 if int(vals[2]) == 1:
-#                     print 'gpio 2'
-#
-#             elif e == gpio_fds[3]:
-#                 if int(vals[3]) == 1:
-#                     print 'gpio 3'
-#
-#         vals = []
-#         gpio_fds = []
-
-d = ['P8_45', 'P8_43', 'P8_41', 'P8_39']
+exceptions = ['E8039020039EEE', 'E80290108AEE', 'E8039011028EEE',
+              'E8039021039FEE', 'E8039022029FEE', 'E8039023019FEE',
+              'E80390300FBAEE']
 
 
-def send_msg():
+def send_msg(rts, cts, msg, uart):
     low = True
     while True:
         print 'loop'
         if low:
             low = False
-            GPIO.output('P8_45', GPIO.HIGH)
+            GPIO.output(rts, GPIO.HIGH)
         else:
             low = True
-            GPIO.output('P8_45', GPIO.LOW)
+            GPIO.output(rts, GPIO.LOW)
 
-        if GPIO.input("P8_46"):
-            print 'sending'
-            ser = serial.Serial('/dev/ttyO1', 115200)
-            ser.write(bytearray.fromhex('E8021005FFEE'))
-            # ser.read(32)
-            GPIO.output('P8_45', GPIO.LOW)
+        if GPIO.input(cts):
+            print 'sending', uart
+            ser = serial.Serial(uart, 115200)
+            ser.write(msg)
+            print 'wrote', ":".join("{:02x}".format(c) for c in msg)
+            incoming_command = ""
+            while True:
+                var = ser.read(1)
+                print ord(var)
+                if ord(var) == 0xee:
+                    incoming_command += var
+                    print ":".join("{:02x}".format(ord(c)) for c in incoming_command)
+                    break
+                else:
+                    incoming_command += var
+            GPIO.output(rts, GPIO.LOW)
+            break
 
-            time.sleep(1)
-            print 'here?'
 
-        time.sleep(1)
+def calculate_checksum_bytes(micro_cmd):
+    sum = 0
+    for i in range(len(micro_cmd) - 2):
+        sum += micro_cmd[i]
+    return sum % 0x100
 
-
-'''
-        # for gpio in d:
-        #     GPIO.output(gpio, GPIO.HIGH)
-        # 
-        #     while True:
-        #         if GPIO.event_detected("P8_40"):
-        #             print 'sending'
-        #             ser = serial.Serial('/dev/ttyO1', 115200)
-        #             ser.write('E80310050021EE')
-        #             break
-        #         if GPIO.event_detected("P8_42"):
-        #             print 'sending'
-        #             ser = serial.Serial('/dev/ttyO2', 115200)
-        #             ser.write('E80310050021EE')
-        #             break
-        #         if GPIO.event_detected("P8_44"):
-        #             print 'sending'
-        #             ser = serial.Serial('/dev/ttyO4', 115200)
-        #             ser.write('E80310050021EE')
-        #             break
-        #         if GPIO.event_detected("P8_46"):
-        #             print 'sending'
-        #             ser = serial.Serial('/dev/ttyO5', 115200)
-        #             ser.write('E80310050021EE')
-        #             break
-        #         print 'trying'
-        #         time.sleep(.5)
-        #     time.sleep(.5)
-        #     GPIO.output(gpio, GPIO.LOW)
-'''
 if __name__ == "__main__":
-
-    send_msg()
-    # low = True
-    # GPIO.output("P8_39", GPIO.HIGH)
-    # GPIO.output("P8_41", GPIO.HIGH)
-    # GPIO.output("P8_43", GPIO.HIGH)
-    # GPIO.output("P8_45", GPIO.HIGH)
-    # while True:
-    #     time.sleep(1)
-    #     if low:
-    #         print 'HIGH'
-    #         low = False
-    #         GPIO.output("P8_45", GPIO.HIGH)
-    #     else:
-    #         print 'LOW'
-    #         low = True
-    #         GPIO.output("P8_45", GPIO.LOW)
-
-    # send_msg()
-    # serial_worker()
-    # print GPIO.setup('P8_41', GPIO.IN)
-    # GPIO.setup('P8_42', GPIO.IN)
-    # GPIO.setup('P8_43', GPIO.IN)
-    # GPIO.setup('P8_44', GPIO.IN)
-
-    # GPIO.add_event_detect("P8_40", GPIO.BOTH)
-    # # print GPIO.event_detected("P8_41")
-    # while True:
-    #     if GPIO.event_detected("P8_40"):
-    #         print "event detected!"
-
-    # ser = serial.Serial('/dev/ttyO4', 115200)
-    # # ba = bytearray.fromhex('E80E42078564523785634455667788942BEE')
-    # # ba = bytearray.fromhex('E80280006AEE')
-    # # ba = bytearray.fromhex('E803100E020BEE')
-    # ba = bytearray.fromhex('E802112520EE')
-    # # print 'sum: ', calculate_checksum(ba)
-    # ser.write(ba)
-    # #
-    # while True:
-    #     t  = ser.read(1)
-    #     print hex(ord(t))
+    # print 'E80211{0:0{1}X}32EE'.format(32,2)
+    while True:
+        for i in range(len(exceptions)):
+            send_msg(RTS[0], CTS[0], bytearray.fromhex(exceptions[i]), UARTS[0])
+        for i in range(100):
+            cm = bytearray([0xE8, 0x02, 0x11, i, 0, 0xEE])
+            cm[-2] = calculate_checksum_bytes(cm)
+            print ":".join("{:02x}".format(c) for c in cm)
+            send_msg(RTS[0], CTS[0], cm, UARTS[0])
+        for i in range(23):
+            for j in range(2):
+                cm = bytearray([0xE8, 0x03, 0x10, i, j, 0, 0xEE])
+                cm[-2] = calculate_checksum_bytes(cm)
+                print ":".join("{:02x}".format(c) for c in cm)
+                send_msg(RTS[0], CTS[0], cm, UARTS[0])
+        for i in range(60):
+            for j in range(2):
+                cm = bytearray([0xE8, 0x03, 0x10, i, j, 0, 0xEE])
+                cm[-2] = calculate_checksum_bytes(cm)
+                print ":".join("{:02x}".format(c) for c in cm)
+                send_msg(RTS[1], CTS[1], cm, UARTS[1])
+        for i in range(60):
+            for j in range(2):
+                cm = bytearray([0xE8, 0x03, 0x10, i, j, 0, 0xEE])
+                cm[-2] = calculate_checksum_bytes(cm)
+                print ":".join("{:02x}".format(c) for c in cm)
+                send_msg(RTS[2], CTS[2], cm, UARTS[2])
+        for i in range(5):
+            for j in range(2):
+                cm = bytearray([0xE8, 0x03, 0x10, i, j, 0, 0xEE])
+                cm[-2] = calculate_checksum_bytes(cm)
+                print ":".join("{:02x}".format(c) for c in cm)
+                send_msg(RTS[3], CTS[3], cm, UARTS[3])
