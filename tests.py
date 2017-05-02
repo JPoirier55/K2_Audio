@@ -271,6 +271,5 @@ class TestButtonMapping(unittest.TestCase):
         dh.setup(json_data)
         self.assertEquals(dh.allocate()['category'], 'ERROR')
 
-
 if __name__ == '__main__':
     unittest.main()
