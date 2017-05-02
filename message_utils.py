@@ -216,13 +216,14 @@ def translate_cfg_cmd(json_command):
     @param json_command: DSP json command
     @return: new micro command
     """
-    # TODO: add in pwm duty cycle and period for mikes protocol
-    comp = json_command['component']
-    cid = json_command['component_id']
-    action = json_command['action']
-    value = json_command['value']
-    parameters = int(hex(int(value))[2:], 16)
-
+    try:
+        comp = json_command['component']
+        cid = json_command['component_id']
+        action = json_command['action']
+        value = json_command['value']
+        parameters = int(hex(int(value))[2:], 16)
+    except:
+        return None, None
     if comp == 'RTE' and cid == 'SLO' and action == 'SET':
         command_byte = command_dict['set_led_slow_rate']
     elif comp == 'RTE' and cid == 'SLO' and action == 'GET':

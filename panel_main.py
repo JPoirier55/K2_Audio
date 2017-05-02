@@ -24,6 +24,7 @@ import socket
 import time
 import logging
 import os
+import sys
 import datetime
 from globals import *
 from copy import deepcopy
@@ -105,7 +106,6 @@ class StartUpTester:
         """
         micro_ack = 0
         for ser in self.sers:
-            print ser
             if DEBUG:
                 print 'Current serial connection:', ser
             ser.write(bytearray.fromhex(micro_cmd))
@@ -215,23 +215,28 @@ def read_serial_generic(ser):
     """
     checksum = 0
     ba = bytearray()
-    start_char = ser.read(1)
-    ba.append(start_char)
-
-    if ord(start_char) == 0xe8:
-        length = ser.read(1)
-        ba.append(length)
-        # Add switch ids corresponding to length
-        for i in range(ord(length)):
-            cmd_byte = ser.read(1)
-            ba.append(cmd_byte)
-        checksum = ser.read(1)
-        ba.append(checksum)
-        stop_char = ser.read(1)
-        ba.append(stop_char)
-    if len(ba) == 0:
+    try:
+        start_char = ser.read(1)
+        ba.append(start_char)
+        if ord(start_char) == 0xe8:
+            length = ser.read(1)
+            ba.append(length)
+            # Add switch ids corresponding to length
+            for i in range(ord(length)):
+                cmd_byte = ser.read(1)
+                ba.append(cmd_byte)
+            checksum = ser.read(1)
+            ba.append(checksum)
+            stop_char = ser.read(1)
+            ba.append(stop_char)
+        else:
+            return None, None
+        if len(ba) == 0:
+            return None, None
+        return ba, checksum
+    except Exception, e:
+        print 'timeout or failure', e
         return None, None
-    return ba, checksum
 
 
 def error_response(error_id, extra_data=""):
@@ -289,6 +294,8 @@ class SerialSendHandler:
                         self.ser.write(uart_command)
 
                         uart_response, checksum = read_serial_generic(self.ser)
+                        if uart_response is None:
+                            return None
 
                         if DEBUG:
                             print uart_command, uart_port
@@ -656,6 +663,7 @@ class SerialReceiveHandler:
         self.tcp_client = None
         self.baudrate = 115200
         self.setup()
+        self.setup_client()
 
     def setup(self):
         """
@@ -668,7 +676,7 @@ class SerialReceiveHandler:
         if DEBUG:
             print 'Setting up Serial connections'
         for uart in self.uart_ports:
-            new_ser = serial.Serial(uart, self.baudrate)
+            new_ser = serial.Serial(uart, self.baudrate, timeout=1)
             self.sers.append(new_ser)
 
     def setup_client(self):
@@ -690,7 +698,7 @@ class SerialReceiveHandler:
         @param uart_port: port being read from
         @return: True if sent, False if not
         """
-        self.setup_client()
+        # self.setup_client()
         unsolicited_handler = unsolicited_utils.UnsolicitedHandler()
         tcp_message = unsolicited_handler.allocate_command(unsol_msg, uart_port)
         if tcp_message is not None:
@@ -731,9 +739,8 @@ class SerialReceiveHandler:
         @return: None
         """
         if DEBUG:
-            print "Serial connection: ", self.ser
+            print "Serial connection: ", self.ser.port
         try:
-            # TODO: use except to catch issues, return error message, harden returning error message to micro
             ba, checksum = read_serial_generic(self.ser)
             if ba is not None:
                 c = self.calculate_checksum(ba)
@@ -746,6 +753,8 @@ class SerialReceiveHandler:
                         self.ser.write(MICRO_ERR)
                 else:
                     self.ser.write(MICRO_ERR)
+            else:
+                self.ser.write(MICRO_ERR)
         except serial.SerialException:
             logging.exception("{0} - Cannot read incoming serial message".format(datetime.datetime.now))
 
@@ -756,6 +765,7 @@ class SerialReceiveHandler:
         RTS which has been flagged will be the port
         index and will follow through to set correct
         serial object and CTS flag
+        
         @param port_index: incoming RTS index
         @return: None
         """
@@ -764,8 +774,6 @@ class SerialReceiveHandler:
                 try:
                     if DEBUG:
                         print 'Serial lock acquired'
-                        print 'PORT INDEX', port_index
-                        print CTS_GPIOS[port_index]
                     self.ser = self.sers[port_index]
                     self.ser.flushInput()
                     GPIO.output(CTS_GPIOS[port_index], GPIO.HIGH)
@@ -797,13 +805,12 @@ class SerialReceiveHandler:
 
             for gpio_edge_fd in GPIO_EDGE_FDS:
                 fd = open(gpio_edge_fd, 'w')
-                # TODO: make sure this is what rts is actually doing (rising/falling)
                 fd.write("rising")
 
             for fd in self.gpio_fds:
                 vals.append(fd.read())
 
-            readable, writable, exceptional = select.select([], [], self.gpio_fds, 5)
+            readable, writable, exceptional = select.select([], [], self.gpio_fds, 1)
             # Read all file descriptors in exceptional for gpios for rts
             for e in exceptional:
                 if e == self.gpio_fds[0]:
@@ -866,9 +873,9 @@ if __name__ == "__main__":
     serial_thread.daemon = True
     serial_thread.start()
 
-    startup_thread = threading.Thread(target=startup_worker)
-    startup_thread.daemon = True
-    startup_thread.start()
+    # startup_thread = threading.Thread(target=startup_worker)
+    # startup_thread.daemon = True
+    # startup_thread.start()
 
     server_address = (HOST, int(PORT))
     print 'Starting server on:', server_address
