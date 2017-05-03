@@ -466,6 +466,8 @@ class DataHandler:
                     response['value'] = '1'
                     response['action'] = '='
                     return response
+                else:
+                    return error_response(1)
             if cid == "FW":
                 if len(set([str(uart_str) for uart_str in uart_responses])) <= 1:
                     response['value'] = FIRMWARE[str(uart_responses[0][3])]
@@ -610,16 +612,15 @@ def tcp_handler(sock):
             readable, writable, exceptional = select.select(inputs, [], [sock], 1)
             for s in readable:
                 if s is sock:
+                    connection, client_address = s.accept()
                     if not READY:
                         READY = True
-                    if STARTUP and READY:
-                        connection, client_address = s.accept()
                         connection.sendall(json.dumps(STATUS_TCP))
-                        connection.setblocking(0)
-                        inputs.append(connection)
+                    # TODO: add in startup, to wait for micros response
                     if DEBUG:
                         print 'Connect', client_address
-
+                    connection.setblocking(0)
+                    inputs.append(connection)
                 else:
                     data = s.recv(1024)
                     if data:
@@ -811,7 +812,7 @@ class SerialReceiveHandler:
             for fd in self.gpio_fds:
                 vals.append(fd.read())
 
-            readable, writable, exceptional = select.select([], [], self.gpio_fds, timeout=self.socket_timeout)
+            readable, writable, exceptional = select.select([], [], self.gpio_fds, self.socket_timeout)
             # Read all file descriptors in exceptional for gpios for rts
             for e in exceptional:
                 if e == self.gpio_fds[0]:
@@ -874,9 +875,9 @@ if __name__ == "__main__":
     serial_thread.daemon = True
     serial_thread.start()
 
-    startup_thread = threading.Thread(target=startup_worker)
-    startup_thread.daemon = True
-    startup_thread.start()
+    # startup_thread = threading.Thread(target=startup_worker)
+    # startup_thread.daemon = True
+    # startup_thread.start()
 
     server_address = (HOST, int(PORT))
     print 'Starting server on:', server_address

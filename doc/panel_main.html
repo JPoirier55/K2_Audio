@@ -37,8 +37,9 @@ WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier</tt></p>
 </td><td width="25%" valign=top><a href="select.html">select</a><br>
 <a href="serial.html">serial</a><br>
 <a href="socket.html">socket</a><br>
-<a href="threading.html">threading</a><br>
-</td><td width="25%" valign=top><a href="time.html">time</a><br>
+<a href="sys.html">sys</a><br>
+</td><td width="25%" valign=top><a href="threading.html">threading</a><br>
+<a href="time.html">time</a><br>
 <a href="unsolicited_utils.html">unsolicited_utils</a><br>
 </td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
@@ -80,6 +81,7 @@ Other&nbsp;-&nbsp;Command&nbsp;falls&nbsp;into&nbsp;other&nbsp;category,&nbsp;in
 
 <dl><dt><a name="DataHandler-get_error_desc"><strong>get_error_desc</strong></a>(self, code)</dt><dd><tt>Translate&nbsp;error&nbsp;byte&nbsp;code&nbsp;into&nbsp;error&nbsp;description<br>
 to&nbsp;be&nbsp;added&nbsp;to&nbsp;response&nbsp;json<br>
+&nbsp;<br>
 @param&nbsp;code:&nbsp;Error&nbsp;byte&nbsp;code<br>
 @return:&nbsp;Description&nbsp;string</tt></dd></dl>
 
@@ -117,7 +119,7 @@ all&nbsp;of&nbsp;them.<br>
 @param&nbsp;cid:&nbsp;Component&nbsp;id&nbsp;(STS&nbsp;or&nbsp;FW)<br>
 @return:&nbsp;Response&nbsp;JSON</tt></dd></dl>
 
-<dl><dt><a name="DataHandler-setup"><strong>setup</strong></a>(self, json_data)</dt><dd><tt>Setup&nbsp;message&nbsp;handler&nbsp;with&nbsp;json&nbsp;<br>
+<dl><dt><a name="DataHandler-setup"><strong>setup</strong></a>(self, json_data)</dt><dd><tt>Setup&nbsp;message&nbsp;handler&nbsp;object&nbsp;with&nbsp;all&nbsp;data&nbsp;from&nbsp;json&nbsp;data&nbsp;<br>
 @param&nbsp;json_data:&nbsp;incoming&nbsp;TCP&nbsp;command<br>
 @return:&nbsp;None</tt></dd></dl>
 
@@ -145,6 +147,7 @@ the&nbsp;incoming&nbsp;message&nbsp;will&nbsp;come&nbsp;in&nbsp;on.&nbsp;The&nbs
 RTS&nbsp;which&nbsp;has&nbsp;been&nbsp;flagged&nbsp;will&nbsp;be&nbsp;the&nbsp;port<br>
 index&nbsp;and&nbsp;will&nbsp;follow&nbsp;through&nbsp;to&nbsp;set&nbsp;correct<br>
 serial&nbsp;object&nbsp;and&nbsp;CTS&nbsp;flag<br>
+&nbsp;<br>
 @param&nbsp;port_index:&nbsp;incoming&nbsp;RTS&nbsp;index<br>
 @return:&nbsp;None</tt></dd></dl>
 
@@ -179,7 +182,9 @@ them&nbsp;to&nbsp;an&nbsp;array<br>
 &nbsp;<br>
 @return:&nbsp;None</tt></dd></dl>
 
-<dl><dt><a name="SerialReceiveHandler-setup_client"><strong>setup_client</strong></a>(self)</dt></dl>
+<dl><dt><a name="SerialReceiveHandler-setup_client"><strong>setup_client</strong></a>(self)</dt><dd><tt>Setup&nbsp;tcp&nbsp;client&nbsp;to&nbsp;handle&nbsp;outgoing&nbsp;messages<br>
+&nbsp;<br>
+@return:&nbsp;None</tt></dd></dl>
 
 </td></tr></table> <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
@@ -191,7 +196,7 @@ them&nbsp;to&nbsp;an&nbsp;array<br>
 <td colspan=2><tt>Handles&nbsp;all&nbsp;serial&nbsp;connections,&nbsp;controls&nbsp;serial&nbsp;locks&nbsp;for&nbsp;each&nbsp;UART&nbsp;port<br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="SerialSendHandler-__init__"><strong>__init__</strong></a>(self, baudrate<font color="#909090">=115200</font>, timeout<font color="#909090">=None</font>)</dt><dd><tt>Init&nbsp;baudrate&nbsp;and&nbsp;timeout&nbsp;for&nbsp;serial<br>
+<dl><dt><a name="SerialSendHandler-__init__"><strong>__init__</strong></a>(self)</dt><dd><tt>Init&nbsp;baudrate&nbsp;and&nbsp;timeout&nbsp;for&nbsp;serial<br>
 &nbsp;<br>
 @param&nbsp;baudrate:&nbsp;baudrate,&nbsp;default&nbsp;115200<br>
 @param&nbsp;timeout:&nbsp;timeout,&nbsp;default&nbsp;None</tt></dd></dl>
@@ -337,6 +342,10 @@ more&nbsp;than&nbsp;5.<br>
 <strong>MICRO_STATUS</strong> = 'E80231001BEE'<br>
 <strong>READY</strong> = False<br>
 <strong>RTS_GPIOS</strong> = ['/sys/class/gpio/gpio71/value', '/sys/class/gpio/gpio73/value', '/sys/class/gpio/gpio75/value', '/sys/class/gpio/gpio77/value']<br>
+<strong>SERIAL_BAUDRATE</strong> = 115200<br>
+<strong>SERIAL_TIMEOUT</strong> = 1<br>
+<strong>SOCKET_TIMEOUT</strong> = 1<br>
+<strong>STARTUP</strong> = False<br>
 <strong>STATUS_TCP</strong> = {'action': '=', 'category': 'STS', 'component': 'SYS', 'component_id': 'STS', 'value': '1'}<br>
 <strong>UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']<br>
 <strong>uart_lock1</strong> = &lt;thread.lock object&gt;<br>
