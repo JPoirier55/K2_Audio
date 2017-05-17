@@ -21,7 +21,6 @@ import serial
 import select
 # import Adafruit_GPIO as GPIO
 import socket
-from message_utils import handle_unsolicited
 
 MICRO_ACK = 'E8018069EE'
 
@@ -33,6 +32,7 @@ def calculate_checksum(micro_cmd):
         print ba[i]
         sum += ba[i]
     return sum % 0x100
+
 
 def serial_worker():
     """
@@ -75,7 +75,7 @@ class SerialReceiveHandler:
         @param baudrate: baudrate, default 115200
         @param timeout: serial timeout, default None
         """
-        self.uarts = ['/dev/ttyO4']
+        self.uarts = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
         self.timeout = timeout
         serial_listeners = self.setup_listeners()
         # self.TCP_CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -123,7 +123,6 @@ class SerialReceiveHandler:
                         incoming_command = ""
                         while True:
                             var = serial_connection.read(1)
-                            print ord(var)
 
                             if ord(var) == 0xee:
                                 incoming_command += var
@@ -134,9 +133,9 @@ class SerialReceiveHandler:
 
                         # msg = handle_unsolicited(incoming_command)
                         ba = bytearray(incoming_command)
-                        print 'serial'
-                        print ":".join("{:02x}".format(c) for c in ba)
-                        print 'done serial'
+                        # print 'serial'
+                        # print ":".join("{:02x}".format(c) for c in ba)
+                        # print 'done serial'
                         serial_connection.write(bytearray.fromhex(MICRO_ACK))
                         # self.TCP_CLIENT.sendall(msg)
 
