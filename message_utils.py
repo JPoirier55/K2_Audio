@@ -318,11 +318,11 @@ def translate_single_led(json_command):
 
     if json_command['action'] == 'GET':
         command_byte = command_dict['get_led_button']
-        micro_cmd = bytearray([start_char, 0, command_byte, parameter,
+        micro_cmd = bytearray([start_char, 0, command_byte, translate_logical_id(parameter),
                                0, stop_char])
     else:
         command_byte = command_dict['set_led_button']
-        micro_cmd = bytearray([start_char, 0, command_byte, value, parameter,
+        micro_cmd = bytearray([start_char, 0, command_byte, value, translate_logical_id(parameter),
                                0, stop_char])
 
     micro_cmd = finalize_cmd(micro_cmd)
@@ -425,7 +425,7 @@ class MessageHandler:
         """
         try:
             value = int(self.json_request['value'])
-            if value > 7:
+            if value > 8:
                 return None, None
         except:
             return None, None
