@@ -75,7 +75,7 @@ class StartUpTester:
         for uart in self.uart_ports:
             self.sers.append(serial.Serial(port=uart, baudrate=self.baudrate, timeout=self.timeout))
 
-    def read_serial(self, ser):
+    def read_serial(self, ser, cmd_type):
         """
         Method to read incoming message from
         micro after sending message
@@ -92,12 +92,17 @@ class StartUpTester:
             return 0
 
         c = calculate_checksum(ba)
+        if cmd_type == 'sts':
+            if c == ord(checksum) and ba[2] == 0x31:
+                print 'cmd status'
+                return 1
+        elif cmd_type == 'led':
+            print 'BA 2', ba[2]
+            if c == ord(checksum) and ba[2] == 0x40:
+                print 'cmd LED'
+                return 1
 
-        if c == ord(checksum) and ba[2] == 0x31:
-            print 'cmd status'
-            return 1
-        else:
-            return 0
+        return 0
 
     def send_command(self, micro_cmd):
         """
@@ -113,8 +118,12 @@ class StartUpTester:
             if DEBUG:
                 print 'Current serial connection:', ser
             ser.write(micro_cmd)
-            micro_ack += self.read_serial(ser)
+            if micro_cmd[2] == 0x31:
+                micro_ack += self.read_serial(ser, 'sts')
+            else:
+                micro_ack += self.read_serial(ser, 'led')
             time.sleep(.1)
+        print 'MICRO ACK NUM: ', micro_ack
         if micro_ack == 4:
             return True
         return False
@@ -154,7 +163,7 @@ class StartUpTester:
         for led in button_led_map.map_arrays['panel']:
             if not READY:
                 ser = self.sers[button_led_map.map_arrays['micro'][led-1]]
-                cmd = bytearray([0xE8, 0x02, 0x40, 0x01])
+                cmd = bytearray([0xE8, 0x03, 0x40, 0x01])
                 cmd.append(button_led_map.map_arrays['logical'][led-1])
                 cmd.append(0x00)
                 cmd.append(0xEE)
@@ -222,14 +231,13 @@ def read_serial_generic(ser):
     """
     checksum = 0
     ba = bytearray()
-    print 'read serial generic'
+
     start_char = ser.read(1)
     ba.append(start_char)
 
     if ord(start_char) == 0xe8:
         length = ser.read(1)
         ba.append(length)
-
         # Add switch ids corresponding to length
         for i in range(ord(length)):
             cmd_byte = ser.read(1)
@@ -239,8 +247,6 @@ def read_serial_generic(ser):
         stop_char = ser.read(1)
         ba.append(stop_char)
 
-    print ":".join("{:02x}".format(c) for c in ba)
-    print 'end serial generic'
     return ba, checksum
 
 
@@ -304,6 +310,9 @@ class SerialSendHandler:
                         self.ser.write(uart_command)
 
                         uart_response, checksum = read_serial_generic(self.ser)
+
+                        # TODO: handle error response from micros
+
                         if uart_response is None:
                             print 'no resp'
                             return None
@@ -311,10 +320,8 @@ class SerialSendHandler:
                         if DEBUG:
                             print "UART {0} - RESPONSE".format(uart_port), \
                                 ":".join("{:02x}".format(c) for c in uart_response)
-
                     finally:
                         LOCKS[uart_port].release()
-
                     break
 
             if calculate_checksum(uart_response) == ord(checksum):
@@ -475,10 +482,11 @@ class DataHandler:
         if len(uart_responses) > 0:
             if cid == "STS":
                 for uart_response in uart_responses:
-                    if uart_response[2] == 0x31:
+                    # TODO: handle bit status response
+                    if uart_response[2] == 0x31 and uart_response[3] == 0x01:
                         ack_num += 1
                 if ack_num == 4:
-                    response['value'] = '1'
+                    response['value'] = str(uart_responses[0][3])
                     response['action'] = '='
                     return response
                 else:
@@ -818,11 +826,9 @@ class SerialReceiveHandler:
         has changed, aka RTS has been flagged.
         @return: None 
         """
-        vals = []
         print 'starting serial'
         while True:
             if GPIO.event_detected("P8_45"):
-                print 'rts'
                 self.handle_locks(0)
             elif GPIO.event_detected("P8_43"):
                 self.handle_locks(1)
@@ -887,5 +893,4 @@ if __name__ == "__main__":
             sock.bind(server_address)
             sock.setblocking(0)
             sock.listen(1)
-
             tcp_handler(sock)
