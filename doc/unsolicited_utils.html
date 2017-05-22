@@ -95,26 +95,26 @@ form&nbsp;byte&nbsp;array<br>
 <font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
     
 <tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><strong>ALL_LEDS</strong> = 'E80240F80123EE'<br>
-<strong>ALL_LEDS_OFF</strong> = 'E80240F80022EE'<br>
+<td width="100%"><strong>ALL_LEDS</strong> = bytearray(b'\xe8\x02@\xf8\x01#\xee')<br>
+<strong>ALL_LEDS_OFF</strong> = bytearray(b'\xe8\x02@\xf8\x00"\xee')<br>
 <strong>BB_ACK</strong> = bytearray(b'E8018069EE')<br>
-<strong>CTS_GPIOS</strong> = ['P8_45', 'P8_43', 'P8_41', 'P8_39']<br>
+<strong>CTS_GPIOS</strong> = ['P8_46', 'P8_44', 'P8_42', 'P8_40']<br>
 <strong>DEBUG</strong> = True<br>
-<strong>DEV_UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2']<br>
+<strong>DEV_UART_PORTS</strong> = ['/dev/ttyO1']<br>
 <strong>DSP_SERVER_IP</strong> = '192.168.255.88'<br>
 <strong>DSP_SERVER_PORT</strong> = 65000<br>
 <strong>ERROR_DESCS</strong> = ['Invalid category or component.', 'State (parameter) out of range', 'Command not understood/syntax invalid.']<br>
 <strong>EXECUTE_LED_LIST</strong> = bytearray(b'\xe8\x02D\x00\x00\xee')<br>
-<strong>FIRMWARE</strong> = {'1': '001', '2': '002', '3': '003', '4': '004', '5': '005', '6': '006', '7': '007'}<br>
-<strong>GPIO_EDGE_FDS</strong> = ['/sys/class/gpio/gpio71/edge', '/sys/class/gpio/gpio73/edge', '/sys/class/gpio/gpio75/edge', '/sys/class/gpio/gpio77/edge']<br>
+<strong>GPIO_EDGE_FDS</strong> = ['/sys/class/gpio/gpio70/edge', '/sys/class/gpio/gpio72/edge', '/sys/class/gpio/gpio74/edge', '/sys/class/gpio/gpio76/edge']<br>
 <strong>MICRO_ACK</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
 <strong>MICRO_ERR</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
-<strong>MICRO_STATUS</strong> = 'E80231001BEE'<br>
-<strong>RTS_GPIOS</strong> = ['/sys/class/gpio/gpio71/value', '/sys/class/gpio/gpio73/value', '/sys/class/gpio/gpio75/value', '/sys/class/gpio/gpio77/value']<br>
+<strong>MICRO_STATUS</strong> = bytearray(b'\xe8\x021\x00\x1b\xee')<br>
+<strong>RTS_GPIOS</strong> = ['/sys/class/gpio/gpio70/value', '/sys/class/gpio/gpio72/value', '/sys/class/gpio/gpio74/value', '/sys/class/gpio/gpio76/value']<br>
 <strong>SERIAL_BAUDRATE</strong> = 115200<br>
 <strong>SERIAL_TIMEOUT</strong> = 1<br>
 <strong>SOCKET_TIMEOUT</strong> = 1<br>
 <strong>STATUS_TCP</strong> = {'action': '=', 'category': 'STS', 'component': 'SYS', 'component_id': 'STS', 'value': '1'}<br>
+<strong>TCP_ON</strong> = False<br>
 <strong>UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']<br>
 <strong>button_actions</strong> = {'fast_flash_green': 3, 'fast_flash_red': 6, 'flash_red_green': 7, 'off': 0, 'slow_flash_green': 2, 'slow_flash_red': 5, 'solid_green': 1, 'solid_red': 4}<br>
 <strong>button_numbers</strong> = {'all': 248, 'center_group': 241, 'semicircle': 240, 'upper_left_group': 243, 'upper_right_group': 242}<br>
