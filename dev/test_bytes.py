@@ -21,10 +21,19 @@ import binascii
 # #         print 'hello'
 # #         time.sleep(.5)
 # #     print i
-import pprint
+# import pprint
+#
+# my_dict = {'name': 'Yasoob', 'age': 'undefined', 'personality': 'awesome'}
+# pprint.pprint(my_dict)
+# print my_dict
 
-my_dict = {'name': 'Yasoob', 'age': 'undefined', 'personality': 'awesome'}
-pprint.pprint(my_dict)
-print my_dict
+t = bytearray.fromhex('E8023181EE')
 
+print bin(0x81)[2:]
 
+if t[2] == 0x31:
+    bit_response = bin(t[3])[2:]
+    print int(bit_response[-1])
+    if int(bit_response[-1]) == 1:
+        print 'okay'
+        print bit_response[-1]

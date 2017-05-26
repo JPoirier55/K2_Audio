@@ -41,8 +41,8 @@ LOCKS = {'/dev/ttyO1': uart_lock1,
          '/dev/ttyO4': uart_lock4,
          '/dev/ttyO5': uart_lock5}
 
-READY = True
-STARTUP = True
+READY = False
+STARTUP = False
 
 
 class StartUpTester:
@@ -84,6 +84,7 @@ class StartUpTester:
         @return: 1 - checksum correct and ack received
                  2 - either checksum or ack not correct/received
         """
+        # ba, checksum = read_serial_generic(ser)
         try:
             ba, checksum = read_serial_generic(ser)
             if DEBUG:
@@ -94,12 +95,10 @@ class StartUpTester:
         c = calculate_checksum(ba)
         if cmd_type == 'sts':
             if c == ord(checksum) and ba[2] == 0x31:
-                print 'cmd status'
                 return 1
         elif cmd_type == 'led':
             print 'BA 2', ba[2]
-            if c == ord(checksum) and ba[2] == 0x40:
-                print 'cmd LED'
+            if c == ord(checksum) and ba == MICRO_ACK:
                 return 1
 
         return 0
@@ -122,8 +121,8 @@ class StartUpTester:
                 micro_ack += self.read_serial(ser, 'sts')
             else:
                 micro_ack += self.read_serial(ser, 'led')
+
             time.sleep(.1)
-        print 'MICRO ACK NUM: ', micro_ack
         if micro_ack == 4:
             return True
         return False
@@ -142,11 +141,18 @@ class StartUpTester:
         print 'Checking micro connections..'
         if self.send_command(MICRO_STATUS):
             print 'Done\nStarting lightup sequence..'
-            if self.send_command(ALL_LEDS):
+            if DEBUG:
+                led_acks = self.send_command(SINGLE_TEST_LED)
+            else:
+                led_acks = self.send_command(ALL_LEDS)
+            if led_acks:
                 print 'Done'
                 time.sleep(2)
                 print 'Stopping lighting sequence..'
-                self.send_command(ALL_LEDS_OFF)
+                if DEBUG:
+                    self.send_command(SINGLE_TEST_LED_OFF)
+                else:
+                    self.send_command(ALL_LEDS_OFF)
                 STARTUP = True
                 return True
         return False
@@ -231,7 +237,6 @@ def read_serial_generic(ser):
     """
     checksum = 0
     ba = bytearray()
-
     start_char = ser.read(1)
     ba.append(start_char)
 
@@ -301,7 +306,6 @@ class SerialSendHandler:
                 # Wait until lock is accessible, then acquire
                 if LOCKS[uart_port].acquire():
                     try:
-                        print 'in serial handler'
                         self.ser = serial.Serial(port=uart_port, baudrate=self.baudrate, timeout=self.timeout)
                         self.ser.flushInput()
                         if DEBUG:
@@ -311,10 +315,7 @@ class SerialSendHandler:
 
                         uart_response, checksum = read_serial_generic(self.ser)
 
-                        # TODO: handle error response from micros
-
                         if uart_response is None:
-                            print 'no resp'
                             return None
 
                         if DEBUG:
@@ -449,10 +450,17 @@ class DataHandler:
                 if uart_response == MICRO_ACK:
                     response['action'] = '='
                     return response
+                elif uart_response[2] == message_utils.status_and_exceptions['error']:
+                    return error_response(1, self.get_error_desc(uart_response[3]))
+                else:
+                    return error_response(1)
             else:
-                response['value'] = str(uart_response[3])
-                response['action'] = '='
-                return response
+                if uart_response[2] == message_utils.status_and_exceptions['error']:
+                    return error_response(1, self.get_error_desc(uart_response[3]))
+                else:
+                    response['value'] = str(uart_response[3])
+                    response['action'] = '='
+                    return response
         else:
             return error_response(1)
 
@@ -482,9 +490,13 @@ class DataHandler:
         if len(uart_responses) > 0:
             if cid == "STS":
                 for uart_response in uart_responses:
-                    # TODO: handle bit status response
-                    if uart_response[2] == 0x31 and uart_response[3] == 0x01:
+                    if uart_response[2] == 0x31:
                         ack_num += 1
+                    elif uart_response[2] == 0xF0:
+                        bit_response = bin(uart_response[3])[2:]
+                        print "BITS", bit_response
+                        if int(bit_response[-1]) == 1:
+                            ack_num += 1
                 if ack_num == 4:
                     response['value'] = str(uart_responses[0][3])
                     response['action'] = '='

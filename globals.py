@@ -34,7 +34,6 @@ GPIO.add_event_detect("P8_41", GPIO.RISING)
 GPIO.add_event_detect("P8_43", GPIO.RISING)
 GPIO.add_event_detect("P8_45", GPIO.RISING)
 
-
 RTS_GPIOS = ['/sys/class/gpio/gpio70/value', '/sys/class/gpio/gpio72/value',
              '/sys/class/gpio/gpio74/value', '/sys/class/gpio/gpio76/value']
 GPIO_EDGE_FDS = ['/sys/class/gpio/gpio70/edge', '/sys/class/gpio/gpio72/edge',
@@ -51,12 +50,16 @@ xUART_PORTS = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']
 
 MICRO_ACK = bytearray.fromhex('E8018069EE')
 MICRO_ERR = bytearray.fromhex('E8018069EE')
-BB_ACK = bytearray('E8018069EE')
-DSP_SERVER_IP = '192.168.255.88'
-DSP_SERVER_PORT = 65000
 MICRO_STATUS = bytearray.fromhex('E80231001BEE')
-ALL_LEDS = bytearray.fromhex('E80240F80123EE')
-ALL_LEDS_OFF = bytearray.fromhex('E80240F80022EE')
+ALL_LEDS = bytearray.fromhex('E80340F80123EE')
+ALL_LEDS_OFF = bytearray.fromhex('E80340F80022EE')
+EXECUTE_LED_LIST = bytearray.fromhex('E802440000EE')
+SINGLE_TEST_LED = bytearray.fromhex('E8034001012DEE')
+SINGLE_TEST_LED_OFF = bytearray.fromhex('E8034001002CEE')
+
+DSP_SERVER_IP = '192.168.255.88'
+DSP_SERVER_PORT = 65001
+
 SERIAL_TIMEOUT = 1
 SERIAL_BAUDRATE = 115200
 SOCKET_TIMEOUT = 1
@@ -67,5 +70,3 @@ ERROR_DESCS = ['Invalid category or component.',
 
 STATUS_TCP = {"category": "STS", "component": "SYS",
               "component_id": "STS", "action": "=", "value": "1"}
-
-EXECUTE_LED_LIST = bytearray.fromhex('E802440000EE')
