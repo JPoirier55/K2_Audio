@@ -9,9 +9,7 @@ WRITTEN BY: Jake Poirier
 """
 from button_led_map import *
 from command_map import *
-
-DEBUG = True
-UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
+from globals import *
 
 
 def translate_uart_port(panel_id):

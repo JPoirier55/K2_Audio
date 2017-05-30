@@ -24,12 +24,11 @@ import socket
 import time
 import logging
 import os
-import sys
+import run_configs
 import datetime
 from globals import *
 from copy import deepcopy
 import Adafruit_BBIO.GPIO as GPIO
-import binascii
 
 uart_lock1 = Lock()
 uart_lock2 = Lock()
@@ -655,6 +654,7 @@ def tcp_handler(sock):
                     if not READY:
                         READY = True
                     connection.sendall(json.dumps(STATUS_TCP))
+                    # TODO: possibly start TCP client here when connected?
                     if DEBUG:
                         print 'Connect', client_address
                     connection.setblocking(0)
@@ -726,9 +726,19 @@ class SerialReceiveHandler:
         
         @return: None
         """
-        if TCP_ON:
-            self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.tcp_client.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
+        while True:
+            try:
+                if TCP_ON:
+                    self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.tcp_client.connect((DSP_SERVER_IP, DSP_SERVER_PORT))
+                    if DEBUG:
+                        print 'Connected with DSP server.'
+                    break
+            except socket.error:
+                if DEBUG:
+                    print 'Trying to connect to DSP TCP server..'
+                time.sleep(1)
+                pass
 
     def send_tcp(self, unsol_msg, uart_port):
         """
@@ -748,6 +758,7 @@ class SerialReceiveHandler:
             try:
                 self.tcp_client.send(json.dumps(tcp_message))
             except socket.error, e:
+                self.setup_client()
                 logging.exception("{0} - Failed to send TCP message".format(datetime.datetime.now()))
                 return False
         else:
@@ -877,25 +888,37 @@ if __name__ == "__main__":
     parser.add_argument('--p', '--PORT', default=65000, help='Port (default 65000)')
     parser.add_argument('--s', '--STARTUP', default=False, help='Startup sequence - default False (off)')
     parser.add_argument('--tc', '--TCP_CLIENT', default=False, help='TCP Client for unsol - default False (off)')
+    parser.add_argument('--f', '--CONF_FILE', default=True, help='Use run_configs.py configuration file instead of '
+                                                                 'command line args')
 
     args = parser.parse_args()
-    HOST, PORT = args.h, args.p
+    if args.f:
+        HOST, PORT = run_configs.config_dict['host'], run_configs.config_dict['port']
+        tcp_client_start = run_configs.config_dict['tcp_client']
+        start_up_sequence = run_configs.config_dict['startup_sequence']
+        DSP_SERVER_IP = run_configs.config_dict['client_host']
+        DSP_SERVER_PORT = run_configs.config_dict['client_port']
+        DEBUG = run_configs.config_dict['debug']
+    else:
+        HOST, PORT = args.h, args.p
+        tcp_client_start = args.tc
+        start_up_sequence = args.s
 
-    if args.tc:
+    if tcp_client_start:
         TCP_ON = True
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serial_handler = SerialReceiveHandler()
 
-    serial_thread = threading.Thread(target=serial_handler.serial_worker)
-    serial_thread.daemon = True
-    serial_thread.start()
-
-    if args.s:
+    if start_up_sequence:
         startup_thread = threading.Thread(target=startup_worker)
         startup_thread.daemon = True
         startup_thread.start()
+
+    serial_thread = threading.Thread(target=serial_handler.serial_worker)
+    serial_thread.daemon = True
+    serial_thread.start()
 
     server_address = (HOST, int(PORT))
     print 'Starting server on:', server_address

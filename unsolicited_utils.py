@@ -7,13 +7,8 @@ micro commands nad tcp packets set to dsp
 WRITTEN BY: Jake Poirier
 
 """
-from globals import *
 from button_led_map import *
 from command_map import *
-import sys
-import logging
-import datetime
-DEBUG = True
 
 
 def calculate_checksum_bytes(micro_cmd):
@@ -80,8 +75,6 @@ class UnsolicitedHandler:
         @return: TCP JSON command 
         """
         micro_button_number = self.micro_command[3]
-        # if DEBUG:
-        #     print ":".join("{:02x}".format(c) for c in self.micro_command)
         button_index = micro_array[self.uart_port]['logical'].index(micro_button_number)
         panel_button_number = micro_array[self.uart_port]['panel'][button_index]
         value = self.micro_command[4]
