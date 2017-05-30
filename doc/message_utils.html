@@ -18,6 +18,14 @@ manipulation&nbsp;before&nbsp;sending&nbsp;to&nbsp;micros.<br>
 WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier</tt></p>
 <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="Adafruit_BBIO.GPIO.html">Adafruit_BBIO.GPIO</a><br>
+</td><td width="25%" valign=top></td><td width="25%" valign=top></td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
 <td colspan=3 valign=bottom>&nbsp;<br>
 <font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
@@ -177,7 +185,26 @@ and&nbsp;the&nbsp;incoming&nbsp;panel_id&nbsp;for&nbsp;micro&nbsp;number<br>
 <font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
     
 <tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><strong>DEBUG</strong> = True<br>
+<td width="100%"><strong>ALL_LEDS</strong> = bytearray(b'\xe8\x03@\xf8\x01#\xee')<br>
+<strong>ALL_LEDS_OFF</strong> = bytearray(b'\xe8\x03@\xf8\x00"\xee')<br>
+<strong>CTS_GPIOS</strong> = ['P8_46', 'P8_44', 'P8_42', 'P8_40']<br>
+<strong>DEBUG</strong> = False<br>
+<strong>DSP_SERVER_IP</strong> = '127.0.0.1'<br>
+<strong>DSP_SERVER_PORT</strong> = 65000<br>
+<strong>ERROR_DESCS</strong> = ['Invalid category or component.', 'State (parameter) out of range', 'Command not understood/syntax invalid.']<br>
+<strong>EXECUTE_LED_LIST</strong> = bytearray(b'\xe8\x02D\x00\x00\xee')<br>
+<strong>GPIO_EDGE_FDS</strong> = ['/sys/class/gpio/gpio70/edge', '/sys/class/gpio/gpio72/edge', '/sys/class/gpio/gpio74/edge', '/sys/class/gpio/gpio76/edge']<br>
+<strong>MICRO_ACK</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
+<strong>MICRO_ERR</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
+<strong>MICRO_STATUS</strong> = bytearray(b'\xe8\x021\x00\x1b\xee')<br>
+<strong>RTS_GPIOS</strong> = ['/sys/class/gpio/gpio70/value', '/sys/class/gpio/gpio72/value', '/sys/class/gpio/gpio74/value', '/sys/class/gpio/gpio76/value']<br>
+<strong>SERIAL_BAUDRATE</strong> = 115200<br>
+<strong>SERIAL_TIMEOUT</strong> = 1<br>
+<strong>SINGLE_TEST_LED</strong> = bytearray(b'\xe8\x03@\x01\x01-\xee')<br>
+<strong>SINGLE_TEST_LED_OFF</strong> = bytearray(b'\xe8\x03@\x01\x00,\xee')<br>
+<strong>SOCKET_TIMEOUT</strong> = 1<br>
+<strong>STATUS_TCP</strong> = {'action': '=', 'category': 'STS', 'component': 'SYS', 'component_id': 'STS', 'value': '1'}<br>
+<strong>TCP_ON</strong> = False<br>
 <strong>UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']<br>
 <strong>button_actions</strong> = {'fast_flash_green': 3, 'fast_flash_red': 6, 'flash_red_green': 7, 'off': 0, 'slow_flash_green': 2, 'slow_flash_red': 5, 'solid_green': 1, 'solid_red': 4}<br>
 <strong>button_numbers</strong> = {'all': 248, 'center_group': 241, 'semicircle': 240, 'upper_left_group': 243, 'upper_right_group': 242}<br>

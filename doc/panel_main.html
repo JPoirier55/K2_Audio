@@ -28,18 +28,17 @@ WRITTEN&nbsp;BY:&nbsp;Jake&nbsp;Poirier</tt></p>
 <tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="Adafruit_BBIO.GPIO.html">Adafruit_BBIO.GPIO</a><br>
 <a href="argparse.html">argparse</a><br>
-<a href="binascii.html">binascii</a><br>
 <a href="button_led_map.html">button_led_map</a><br>
-</td><td width="25%" valign=top><a href="datetime.html">datetime</a><br>
-<a href="json.html">json</a><br>
+<a href="datetime.html">datetime</a><br>
+</td><td width="25%" valign=top><a href="json.html">json</a><br>
 <a href="logging.html">logging</a><br>
 <a href="message_utils.html">message_utils</a><br>
-</td><td width="25%" valign=top><a href="os.html">os</a><br>
+<a href="os.html">os</a><br>
+</td><td width="25%" valign=top><a href="run_configs.html">run_configs</a><br>
 <a href="select.html">select</a><br>
 <a href="serial.html">serial</a><br>
 <a href="socket.html">socket</a><br>
-</td><td width="25%" valign=top><a href="sys.html">sys</a><br>
-<a href="threading.html">threading</a><br>
+</td><td width="25%" valign=top><a href="threading.html">threading</a><br>
 <a href="time.html">time</a><br>
 <a href="unsolicited_utils.html">unsolicited_utils</a><br>
 </td></tr></table></td></tr></table><p>
@@ -325,13 +324,11 @@ more&nbsp;than&nbsp;5.<br>
 <font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
     
 <tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><strong>ALL_LEDS</strong> = bytearray(b'\xe8\x02@\xf8\x01#\xee')<br>
-<strong>ALL_LEDS_OFF</strong> = bytearray(b'\xe8\x02@\xf8\x00"\xee')<br>
-<strong>BB_ACK</strong> = bytearray(b'E8018069EE')<br>
+<td width="100%"><strong>ALL_LEDS</strong> = bytearray(b'\xe8\x03@\xf8\x01#\xee')<br>
+<strong>ALL_LEDS_OFF</strong> = bytearray(b'\xe8\x03@\xf8\x00"\xee')<br>
 <strong>CTS_GPIOS</strong> = ['P8_46', 'P8_44', 'P8_42', 'P8_40']<br>
-<strong>DEBUG</strong> = True<br>
-<strong>DEV_UART_PORTS</strong> = ['/dev/ttyO1']<br>
-<strong>DSP_SERVER_IP</strong> = '192.168.255.88'<br>
+<strong>DEBUG</strong> = False<br>
+<strong>DSP_SERVER_IP</strong> = '127.0.0.1'<br>
 <strong>DSP_SERVER_PORT</strong> = 65000<br>
 <strong>ERROR_DESCS</strong> = ['Invalid category or component.', 'State (parameter) out of range', 'Command not understood/syntax invalid.']<br>
 <strong>EXECUTE_LED_LIST</strong> = bytearray(b'\xe8\x02D\x00\x00\xee')<br>
@@ -340,18 +337,19 @@ more&nbsp;than&nbsp;5.<br>
 <strong>MICRO_ACK</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
 <strong>MICRO_ERR</strong> = bytearray(b'\xe8\x01\x80i\xee')<br>
 <strong>MICRO_STATUS</strong> = bytearray(b'\xe8\x021\x00\x1b\xee')<br>
-<strong>READY</strong> = True<br>
+<strong>READY</strong> = False<br>
 <strong>RTS_GPIOS</strong> = ['/sys/class/gpio/gpio70/value', '/sys/class/gpio/gpio72/value', '/sys/class/gpio/gpio74/value', '/sys/class/gpio/gpio76/value']<br>
 <strong>SERIAL_BAUDRATE</strong> = 115200<br>
 <strong>SERIAL_TIMEOUT</strong> = 1<br>
+<strong>SINGLE_TEST_LED</strong> = bytearray(b'\xe8\x03@\x01\x01-\xee')<br>
+<strong>SINGLE_TEST_LED_OFF</strong> = bytearray(b'\xe8\x03@\x01\x00,\xee')<br>
 <strong>SOCKET_TIMEOUT</strong> = 1<br>
-<strong>STARTUP</strong> = True<br>
+<strong>STARTUP</strong> = False<br>
 <strong>STATUS_TCP</strong> = {'action': '=', 'category': 'STS', 'component': 'SYS', 'component_id': 'STS', 'value': '1'}<br>
 <strong>TCP_ON</strong> = False<br>
 <strong>UART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']<br>
 <strong>uart_lock1</strong> = &lt;thread.lock object&gt;<br>
 <strong>uart_lock2</strong> = &lt;thread.lock object&gt;<br>
 <strong>uart_lock4</strong> = &lt;thread.lock object&gt;<br>
-<strong>uart_lock5</strong> = &lt;thread.lock object&gt;<br>
-<strong>xUART_PORTS</strong> = ['/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1', '/dev/ttyO1']</td></tr></table>
+<strong>uart_lock5</strong> = &lt;thread.lock object&gt;</td></tr></table>
 </body></html>
