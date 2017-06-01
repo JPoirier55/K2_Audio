@@ -40,8 +40,8 @@ LOCKS = {'/dev/ttyO1': uart_lock1,
          '/dev/ttyO4': uart_lock4,
          '/dev/ttyO5': uart_lock5}
 
-READY = False
-STARTUP = False
+READY = True
+STARTUP = True
 
 
 class StartUpTester:
@@ -654,25 +654,25 @@ def tcp_handler(sock):
                     if not READY:
                         READY = True
                     connection.sendall(json.dumps(STATUS_TCP))
-                    # TODO: possibly start TCP client here when connected?
                     if DEBUG:
                         print 'Connect', client_address
                     connection.setblocking(0)
                     inputs.append(connection)
                 else:
-                    data = s.recv(1024)
-                    if data:
-                        try:
-                            json_data = json.loads(data.replace(",}", "}"), encoding='utf8')
-                            if READY:
-                                data_handler.setup(json_data)
-                                response = data_handler.allocate()
+                    raw_data = s.recv(4096)
+                    if raw_data:
+                        for packet in raw_data.split("\r"):
+                            try:
+                                json_data = json.loads(packet.replace(",}", "}"), encoding='utf8')
+                                if READY:
+                                    data_handler.setup(json_data)
+                                    response = data_handler.allocate()
 
-                                s.sendall(json.dumps(response))
-                                if s not in outputs:
-                                    outputs.append(s)
-                        except Exception as e:
-                            s.sendall(json.dumps(error_response(0)))
+                                    s.sendall(json.dumps(response))
+                                    if s not in outputs:
+                                        outputs.append(s)
+                            except Exception as e:
+                                s.sendall(json.dumps(error_response(0)))
 
                     else:
                         if DEBUG:
@@ -859,7 +859,7 @@ class SerialReceiveHandler:
                 self.handle_locks(2)
             elif GPIO.event_detected("P8_39"):
                 self.handle_locks(3)
-            time.sleep(.001)
+            time.sleep(.00001)
 
 
 def check_logfile_size():

@@ -11,7 +11,7 @@
 config_dict = {'host': '0.0.0.0',
                'port': 8003,
                'tcp_client': True,
-               'startup_sequence': True,
+               'startup_sequence': False,
                'client_host': '192.168.255.76',
-               'client_port': 65000,
+               'client_port': 7477,
                'debug': True}
