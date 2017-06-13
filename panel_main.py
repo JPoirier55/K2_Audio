@@ -140,18 +140,14 @@ class StartUpTester:
         print 'Checking micro connections..'
         if self.send_command(MICRO_STATUS):
             print 'Done\nStarting lightup sequence..'
-            if DEBUG:
-                led_acks = self.send_command(SINGLE_TEST_LED)
-            else:
-                led_acks = self.send_command(ALL_LEDS)
+
+            led_acks = self.send_command(ALL_LEDS)
             if led_acks:
                 print 'Done'
                 time.sleep(2)
                 print 'Stopping lighting sequence..'
-                if DEBUG:
-                    self.send_command(SINGLE_TEST_LED_OFF)
-                else:
-                    self.send_command(ALL_LEDS_OFF)
+
+                self.send_command(ALL_LEDS_OFF)
                 STARTUP = True
                 return True
         return False
