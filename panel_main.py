@@ -40,8 +40,8 @@ LOCKS = {'/dev/ttyO1': uart_lock1,
          '/dev/ttyO4': uart_lock4,
          '/dev/ttyO5': uart_lock5}
 
-READY = True
-STARTUP = True
+READY = False
+STARTUP = False
 
 
 class StartUpTester:
@@ -87,7 +87,7 @@ class StartUpTester:
         try:
             ba, checksum = read_serial_generic(ser)
             if DEBUG:
-                print ":".join("{:02x}".format(c) for c in ba)
+                print "READ SERIAL GENERIC OUTPUT", ":".join("{:02x}".format(c) for c in ba)
         except Exception:
             return 0
 
@@ -113,15 +113,17 @@ class StartUpTester:
         """
         micro_ack = 0
         for ser in self.sers:
+
             if DEBUG:
                 print 'Current serial connection:', ser
             ser.write(micro_cmd)
+
             if micro_cmd[2] == 0x31:
                 micro_ack += self.read_serial(ser, 'sts')
             else:
                 micro_ack += self.read_serial(ser, 'led')
 
-            time.sleep(.1)
+            time.sleep(.5)
         if micro_ack == 4:
             return True
         return False
@@ -140,7 +142,7 @@ class StartUpTester:
         print 'Checking micro connections..'
         if self.send_command(MICRO_STATUS):
             print 'Done\nStarting lightup sequence..'
-
+            time.sleep(2)
             led_acks = self.send_command(ALL_LEDS)
             if led_acks:
                 print 'Done'
@@ -484,6 +486,7 @@ class DataHandler:
                 uart_responses.append(self.serial_handler.serial_handle(uart_command, port))
         if len(uart_responses) > 0:
             if cid == "STS":
+                print 'HER EIN STATUS'
                 for uart_response in uart_responses:
                     if uart_response[2] == 0x31:
                         ack_num += 1
@@ -507,9 +510,7 @@ class DataHandler:
                     response['action'] = '='
                     return response
                 else:
-                    response['value'] = 'xxx'
-                    response['action'] = '='
-                    return response
+                    return error_response(1, "Not all micros are using the same firmware")
         else:
             return error_response(1)
 
@@ -657,18 +658,19 @@ def tcp_handler(sock):
                 else:
                     raw_data = s.recv(4096)
                     if raw_data:
-                        for packet in raw_data.split("\r"):
-                            try:
-                                json_data = json.loads(packet.replace(",}", "}"), encoding='utf8')
-                                if READY:
-                                    data_handler.setup(json_data)
-                                    response = data_handler.allocate()
+                        # for packet in raw_data.split("\r"):
+                        #     print "PACKET:", packet
+                        try:
+                            json_data = json.loads(raw_data.replace(",}", "}"), encoding='utf8')
+                            if READY:
+                                data_handler.setup(json_data)
+                                response = data_handler.allocate()
 
-                                    s.sendall(json.dumps(response))
-                                    if s not in outputs:
-                                        outputs.append(s)
-                            except Exception as e:
-                                s.sendall(json.dumps(error_response(0)))
+                                s.sendall(json.dumps(response))
+                                if s not in outputs:
+                                    outputs.append(s)
+                        except Exception as e:
+                            s.sendall(json.dumps(error_response(0)))
 
                     else:
                         if DEBUG:
@@ -700,7 +702,6 @@ class SerialReceiveHandler:
         self.gpio_fds = []
         self.sers = []
         self.setup()
-        self.setup_client()
 
     def setup(self):
         """
@@ -715,6 +716,8 @@ class SerialReceiveHandler:
         for uart in self.uart_ports:
             new_ser = serial.Serial(port=uart, baudrate=self.baudrate, timeout=self.timeout)
             self.sers.append(new_ser)
+        if TCP_ON:
+            self.setup_client()
 
     def setup_client(self):
         """
@@ -799,7 +802,8 @@ class SerialReceiveHandler:
                     print 'Checksum: ', c, ord(checksum)
                 if c == ord(checksum):
                     self.ser.write(MICRO_ACK)
-                    self.send_tcp(ba, self.ser.port)
+                    if TCP_ON:
+                        self.send_tcp(ba, self.ser.port)
                 else:
                     self.ser.write(MICRO_ERR)
             else:
@@ -889,6 +893,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.f:
+        # If running from run_configs.py
         HOST, PORT = run_configs.config_dict['host'], run_configs.config_dict['port']
         tcp_client_start = run_configs.config_dict['tcp_client']
         start_up_sequence = run_configs.config_dict['startup_sequence']
@@ -896,6 +901,8 @@ if __name__ == "__main__":
         DSP_SERVER_PORT = run_configs.config_dict['client_port']
         DEBUG = run_configs.config_dict['debug']
     else:
+        # If running from command line - use DSP_SERVER_IP
+        # and DSP_SERVER_PORT and DEBUG from globals.py
         HOST, PORT = args.h, args.p
         tcp_client_start = args.tc
         start_up_sequence = args.s
@@ -903,14 +910,16 @@ if __name__ == "__main__":
     if tcp_client_start:
         TCP_ON = True
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serial_handler = SerialReceiveHandler()
-
     if start_up_sequence:
         startup_thread = threading.Thread(target=startup_worker)
         startup_thread.daemon = True
         startup_thread.start()
+    else:
+        STARTUP = True
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    serial_handler = SerialReceiveHandler()
 
     serial_thread = threading.Thread(target=serial_handler.serial_worker)
     serial_thread.daemon = True

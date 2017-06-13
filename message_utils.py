@@ -140,6 +140,7 @@ def translate_led_array(json_command):
     command_array = {}
     logical_ids = []
     command_byte = command_dict['set_led_list']
+    value = int(hex(int(json_command['value']))[2:], 16)
 
     for id in json_command['component_id']:
         try:
@@ -152,7 +153,7 @@ def translate_led_array(json_command):
 
     for micro_num, cid_array in cid_arrays.iteritems():
         if len(cid_array) > 0:
-            micro_cmd = bytearray([start_char, 0, command_byte])
+            micro_cmd = bytearray([start_char, 0, command_byte, value])
             uart_port = UART_PORTS[int(micro_num[-1])]
             command_array[uart_port] = []
 
@@ -170,7 +171,7 @@ def translate_led_array(json_command):
                     micro_cmd = finalize_cmd(micro_cmd)
                     command_array[uart_port].append(micro_cmd)
 
-                    micro_cmd = bytearray([start_char, 0, command_byte])
+                    micro_cmd = bytearray([start_char, 0, command_byte, value])
 
             # Handle array that is less than 16 for one micro
             else:
@@ -186,7 +187,7 @@ def translate_led_array(json_command):
     return command_array, "ARRAY"
 
 
-def translate_all_led():
+def translate_all_led(json_command):
     """
     Translate the command for all LEDs
     into the proper micro command
@@ -195,11 +196,14 @@ def translate_all_led():
     @return: String micro command
     """
     parameters = button_numbers['all']
+    value = int(hex(int(json_command['value']))[2:], 16)
     command_byte = command_dict['set_led_button']
+    print value
 
-    micro_cmd = bytearray([start_char, 0, command_byte, parameters, 0, stop_char])
+    micro_cmd = bytearray([start_char, 0, command_byte, value, parameters, 0, stop_char])
 
     micro_cmd = finalize_cmd(micro_cmd)
+    print 'alll leds'
 
     return micro_cmd, 'ALL'
 
@@ -432,7 +436,7 @@ class MessageHandler:
             micro_command, uart_port = translate_led_array(self.json_request)
             return micro_command, uart_port
         elif self.component == 'LED' and self.component_id == 'ALL':
-            micro_command, uart_port = translate_all_led()
+            micro_command, uart_port = translate_all_led(self.json_request)
             return micro_command, uart_port
         elif self.component == 'LED':
             micro_command, uart_port = translate_single_led(self.json_request)

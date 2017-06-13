@@ -1,6 +1,6 @@
 """
 FILE:   globals.py
-DESCRIPTION: All global variables contained in one module used by 
+DESCRIPTION: All global variables contained in one module used by
 tcp_server.py
 
 WRITTEN BY: Jake Poirier
@@ -57,8 +57,8 @@ UART_PORTS = ['/dev/ttyO1', '/dev/ttyO2', '/dev/ttyO4', '/dev/ttyO5']
 MICRO_ACK = bytearray.fromhex('E8018069EE')
 MICRO_ERR = bytearray.fromhex('E8018069EE')
 MICRO_STATUS = bytearray.fromhex('E80231001BEE')
-ALL_LEDS = bytearray.fromhex('E8034001F823EE')
-ALL_LEDS_OFF = bytearray.fromhex('E8034000F822EE')
+ALL_LEDS = bytearray.fromhex('E8034001F824EE')
+ALL_LEDS_OFF = bytearray.fromhex('E8034000F823EE')
 EXECUTE_LED_LIST = bytearray.fromhex('E802440000EE')
 SINGLE_TEST_LED = bytearray.fromhex('E8034001012DEE')
 SINGLE_TEST_LED_OFF = bytearray.fromhex('E8034001002CEE')
