@@ -166,10 +166,14 @@ class StartUpTester:
         for led in button_led_map.map_arrays['panel']:
             if not READY:
                 ser = self.sers[button_led_map.map_arrays['micro'][led-1]]
-                cmd = bytearray([0xE8, 0x03, 0x40, 0x01])
+                cmd = bytearray([0xE8, 0x03, 0x40, 0x04])
                 cmd.append(button_led_map.map_arrays['logical'][led-1])
                 cmd.append(0x00)
                 cmd.append(0xEE)
+                cmd[-2] = calculate_checksum(cmd)
+                ser.write(cmd)
+                time.sleep(.01)
+                cmd[3] = int(hex(int(1))[2:], 16)
                 cmd[-2] = calculate_checksum(cmd)
                 ser.write(cmd)
                 time.sleep(.01)
@@ -384,6 +388,7 @@ class DataHandler:
                 return response
 
         # Handle sending an array of led ids for certain micros
+        # TODO: Test this with micros, debug with micros once there is support for it
         elif uart_port == "ARRAY":
             uart_responses = []
             exec_uart_responses = []
@@ -424,9 +429,7 @@ class DataHandler:
                 response['value'] = str(uart_response[3])
                 response['action'] = '='
                 return response
-        else:
-            return error_response(1)
-        return error_response(1)
+        return error_response(1, "Command invalid for LED(s)")
 
     def handle_enc(self, action):
         """
@@ -441,25 +444,25 @@ class DataHandler:
         if uart_command is not None:
             uart_response = self.serial_handler.serial_handle(uart_command, uart_port)
             if uart_response is None:
-                return error_response(1)
+                return error_response(1, "No response from micro, check encoder command")
             response = self.json_data
             if action == 'SET':
                 if uart_response == MICRO_ACK:
                     response['action'] = '='
                     return response
                 elif uart_response[2] == message_utils.status_and_exceptions['error']:
-                    return error_response(1, self.get_error_desc(uart_response[3]))
+                    return error_response(1, "Micro error msg: {0}".format(self.get_error_desc(uart_response[3])))
                 else:
-                    return error_response(1)
+                    return error_response(1, "Invalid message, check micro firmware")
             else:
                 if uart_response[2] == message_utils.status_and_exceptions['error']:
-                    return error_response(1, self.get_error_desc(uart_response[3]))
+                    return error_response(1, "Micro error msg: {0}".format(self.get_error_desc(uart_response[3])))
                 else:
                     response['value'] = str(uart_response[3])
                     response['action'] = '='
                     return response
         else:
-            return error_response(1)
+            return error_response(1, "No response from micro, check encoder command")
 
     def handle_sts(self, cid):
         """
@@ -486,13 +489,11 @@ class DataHandler:
                 uart_responses.append(self.serial_handler.serial_handle(uart_command, port))
         if len(uart_responses) > 0:
             if cid == "STS":
-                print 'HER EIN STATUS'
                 for uart_response in uart_responses:
                     if uart_response[2] == 0x31:
                         ack_num += 1
                     elif uart_response[2] == 0xF0:
                         bit_response = bin(uart_response[3])[2:]
-                        print "BITS", bit_response
                         if int(bit_response[-1]) == 1:
                             ack_num += 1
                 if ack_num == 4:
@@ -512,7 +513,7 @@ class DataHandler:
                 else:
                     return error_response(1, "Not all micros are using the same firmware")
         else:
-            return error_response(1)
+            return error_response(2, "No response from micro, check status command")
 
     def handle_cfg(self, action):
         """
@@ -532,19 +533,19 @@ class DataHandler:
                     response['action'] = '='
                     return response
                 elif uart_response[2] == message_utils.status_and_exceptions['error']:
-                    return error_response(1, self.get_error_desc(uart_response[3]))
+                    return error_response(1, "Micro error msg: {0}".format(self.get_error_desc(uart_response[3])))
                 else:
-                    return error_response(1)
+                    return error_response(1, "Invalid message, check micro firmware")
 
             else:
                 if uart_response[2] == message_utils.status_and_exceptions['error']:
-                    return error_response(1, self.get_error_desc(uart_response[3]))
+                    return error_response(1, "Micro error msg: {0}".format(self.get_error_desc(uart_response[3])))
                 else:
                     response['value'] = str(uart_response[3])
                     response['action'] = '='
                     return response
         else:
-            return error_response(1)
+            return error_response(1, "No response from micro, check configuration command")
 
     def get_error_desc(self, code):
         """
@@ -600,17 +601,17 @@ class DataHandler:
                     return self.handle_enc(action)
 
                 else:
-                    return error_response(1)
+                    return error_response(1, "Wrong category combination with action")
             else:
                 if DEBUG:
                     print 'Returning with failure'
-                return error_response(0)
+                return error_response(0, "JSON key missing")
 
         except TypeError, e:
             if DEBUG:
                 print e
             logging.exception("{0} - Failed reading and allocating micro message".format(datetime.datetime.now()))
-            return error_response(0)
+            return error_response(2, "JSON is of incorrect form")
 
 
 def tcp_handler(sock):
@@ -656,21 +657,22 @@ def tcp_handler(sock):
                     connection.setblocking(0)
                     inputs.append(connection)
                 else:
-                    raw_data = s.recv(4096)
+                    raw_data = s.recv(16384)
                     if raw_data:
-                        # for packet in raw_data.split("\r"):
-                        #     print "PACKET:", packet
-                        try:
-                            json_data = json.loads(raw_data.replace(",}", "}"), encoding='utf8')
-                            if READY:
-                                data_handler.setup(json_data)
-                                response = data_handler.allocate()
+                        for packet in raw_data.split("\r"):
+                            if "{" in packet and "}" in packet:
+                                try:
+                                    json_data = json.loads(packet.replace(",}", "}"), encoding='utf8')
+                                    print json_data
+                                    if READY:
+                                        data_handler.setup(json_data)
+                                        response = data_handler.allocate()
 
-                                s.sendall(json.dumps(response))
-                                if s not in outputs:
-                                    outputs.append(s)
-                        except Exception as e:
-                            s.sendall(json.dumps(error_response(0)))
+                                        s.sendall(json.dumps(response))
+                                        if s not in outputs:
+                                            outputs.append(s)
+                                except Exception as e:
+                                    s.sendall(json.dumps(error_response(2, "Incorrect JSON format")))
 
                     else:
                         if DEBUG:
@@ -681,7 +683,6 @@ def tcp_handler(sock):
                         s.close()
 
     except socket.error, e:
-        print'ERROR'
         logging.exception("{0} - Failed to read data from socket".format(datetime.datetime.now()))
 
 
@@ -919,8 +920,8 @@ if __name__ == "__main__":
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serial_handler = SerialReceiveHandler()
 
+    serial_handler = SerialReceiveHandler()
     serial_thread = threading.Thread(target=serial_handler.serial_worker)
     serial_thread.daemon = True
     serial_thread.start()
