@@ -88,19 +88,17 @@ class StartUpTester:
             ba, checksum = read_serial_generic(ser)
             if DEBUG:
                 print "READ SERIAL GENERIC OUTPUT", ":".join("{:02x}".format(c) for c in ba)
-        except Exception:
+            c = calculate_checksum(ba)
+            if cmd_type == 'sts':
+                if c == ord(checksum) and ba[2] == 0x31:
+                    return 1
+            elif cmd_type == 'led':
+                print 'BA 2', ba[2]
+                if c == ord(checksum) and ba == MICRO_ACK:
+                    return 1
+        except Exception, e:
+            logging.exception("Failed on reading from serial connection: {0}".format(e))
             return 0
-
-        c = calculate_checksum(ba)
-        if cmd_type == 'sts':
-            if c == ord(checksum) and ba[2] == 0x31:
-                return 1
-        elif cmd_type == 'led':
-            print 'BA 2', ba[2]
-            if c == ord(checksum) and ba == MICRO_ACK:
-                return 1
-
-        return 0
 
     def send_command(self, micro_cmd):
         """
@@ -120,8 +118,10 @@ class StartUpTester:
 
             if micro_cmd[2] == 0x31:
                 micro_ack += self.read_serial(ser, 'sts')
-            else:
+            elif micro_cmd[2] == 0x40:
                 micro_ack += self.read_serial(ser, 'led')
+            else:
+                return False
 
             time.sleep(.5)
         if micro_ack == 4:
@@ -148,7 +148,6 @@ class StartUpTester:
                 print 'Done'
                 time.sleep(2)
                 print 'Stopping lighting sequence..'
-
                 self.send_command(ALL_LEDS_OFF)
                 STARTUP = True
                 return True
@@ -166,17 +165,21 @@ class StartUpTester:
         for led in button_led_map.map_arrays['panel']:
             if not READY:
                 ser = self.sers[button_led_map.map_arrays['micro'][led-1]]
-                cmd = bytearray([0xE8, 0x03, 0x40, 0x04])
+                cmd = bytearray([0xE8, 0x03, 0x40, 0x01])
                 cmd.append(button_led_map.map_arrays['logical'][led-1])
                 cmd.append(0x00)
                 cmd.append(0xEE)
                 cmd[-2] = calculate_checksum(cmd)
                 ser.write(cmd)
-                time.sleep(.01)
-                cmd[3] = int(hex(int(1))[2:], 16)
-                cmd[-2] = calculate_checksum(cmd)
-                ser.write(cmd)
-                time.sleep(.01)
+                micro_ack = self.read_serial(ser, 'led')
+                if micro_ack == 0:
+                    ser.write(cmd)
+                    micro_ack = self.read_serial(ser, 'led')
+                    if micro_ack == 0:
+                        logging.exception("LED cannot be turned on - "
+                                          "cmd: {0}".format(":".join("{:02x}".format(c) for c in cmd)))
+                else:
+                    time.sleep(.01)
 
 
 def startup_worker():
@@ -735,8 +738,6 @@ class SerialReceiveHandler:
                         print 'Connected with DSP server.'
                     break
             except socket.error:
-                if DEBUG:
-                    print 'Trying to connect to DSP TCP server..'
                 time.sleep(1)
                 pass
 
