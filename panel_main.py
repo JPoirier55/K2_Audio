@@ -86,18 +86,16 @@ class StartUpTester:
         # ba, checksum = read_serial_generic(ser)
         try:
             ba, checksum = read_serial_generic(ser)
-            if DEBUG:
-                print "READ SERIAL GENERIC OUTPUT", ":".join("{:02x}".format(c) for c in ba)
             c = calculate_checksum(ba)
             if cmd_type == 'sts':
                 if c == ord(checksum) and ba[2] == 0x31:
                     return 1
             elif cmd_type == 'led':
-                print 'BA 2', ba[2]
                 if c == ord(checksum) and ba == MICRO_ACK:
                     return 1
         except Exception, e:
-            logging.exception("Failed on reading from serial connection: {0}".format(e))
+            logging.exception("Failed on reading from serial connection {0} "
+                              "(from cmd of type {1}): {2}".format(ser, cmd_type, e))
             return 0
 
     def send_command(self, micro_cmd):
@@ -173,10 +171,12 @@ class StartUpTester:
                 ser.write(cmd)
                 micro_ack = self.read_serial(ser, 'led')
                 if micro_ack == 0:
+                    logging.exception("LED cannot be turned on FIRST try- "
+                                      "cmd: {0}".format(":".join("{:02x}".format(c) for c in cmd)))
                     ser.write(cmd)
                     micro_ack = self.read_serial(ser, 'led')
                     if micro_ack == 0:
-                        logging.exception("LED cannot be turned on - "
+                        logging.exception("LED cannot be turned on SECOND try- "
                                           "cmd: {0}".format(":".join("{:02x}".format(c) for c in cmd)))
                 else:
                     time.sleep(.01)
