@@ -90,9 +90,13 @@ class StartUpTester:
             if cmd_type == 'sts':
                 if c == ord(checksum) and ba[2] == 0x31:
                     return 1
+                else:
+                    return 0
             elif cmd_type == 'led':
                 if c == ord(checksum) and ba == MICRO_ACK:
                     return 1
+                else:
+                    return 0
         except Exception, e:
             logging.exception("Failed on reading from serial connection {0} "
                               "(from cmd of type {1}): {2}".format(ser, cmd_type, e))
