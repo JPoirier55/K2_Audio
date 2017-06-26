@@ -811,6 +811,7 @@ class SerialReceiveHandler:
             else:
                 self.ser.write(MICRO_ERR)
         except serial.SerialException:
+            GPIO.output(CTS_GPIOS[port_index], GPIO.LOW)
             logging.exception("{0} - Cannot read incoming serial message".format(datetime.datetime.now))
 
     def handle_locks(self, port_index):
