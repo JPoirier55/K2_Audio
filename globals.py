@@ -67,6 +67,7 @@ SINGLE_TEST_LED_OFF = bytearray.fromhex('E8034001002CEE')
 # real server IP and port under run_configs.py
 DSP_SERVER_IP = '127.0.0.1'
 DSP_SERVER_PORT = 65000
+DSP_SERVER_IP_CHANGED = False
 
 # Serial and socket globals
 SERIAL_BAUDRATE = 115200

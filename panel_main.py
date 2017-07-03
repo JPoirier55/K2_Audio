@@ -566,6 +566,31 @@ class DataHandler:
             if code == byte_code:
                 return desc
 
+    def handle_change_ip(self, action):
+        """
+        Handles changing between the IPs the DSP
+        will be using. Flag is set when changed, and will
+        update the connection when it is reset
+
+        :param action: incoming action (SET or GET)
+        :return: Response JSON
+        """
+        global DSP_SERVER_IP, DSP_SERVER_IP_CHANGED
+        response = self.json_data
+        if action == 'SET':
+            try:
+                DSP_SERVER_IP = self.json_data['component_id']
+                DSP_SERVER_IP_CHANGED = True
+                response['action'] = '='
+                return response
+            except Exception, e:
+                logging.exception("Cannot change IP addresses: {0}".format(e))
+                return error_response(1, "Cannot change IP address - Check format is correct ipv4 format")
+        else:
+            response['action'] = '='
+            response['component_id'] = DSP_SERVER_IP
+            return response
+
     def allocate(self):
         """
         Allocate incoming data to corresponding function
@@ -589,6 +614,10 @@ class DataHandler:
                 category = self.json_data['category']
                 action = self.json_data['action']
                 cid = self.json_data['component_id']
+
+                # Handle change of ip address for DSP server
+                if category == "IP" and (action == "SET" or action == "GET"):
+                    return self.handle_change_ip(action)
 
                 # Handle sending micro command for configuration
                 if category == "CFG" and (action == "SET" or action == "GET"):
@@ -857,6 +886,10 @@ class SerialReceiveHandler:
         @return: None 
         """
         print 'starting serial'
+        global DSP_SERVER_IP_CHANGED
+        if DSP_SERVER_IP_CHANGED:
+            self.setup_client()
+            DSP_SERVER_IP_CHANGED = False
         while True:
             if GPIO.event_detected("P8_45"):
                 self.handle_locks(0)
